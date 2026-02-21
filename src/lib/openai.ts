@@ -4,6 +4,8 @@ export const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
+import { generateWithFallback } from "./ai";
+
 export async function generateAcademicContent(
     sectionTitle: string,
     projectContext: { title: string; type: string; field: string },
@@ -22,19 +24,5 @@ export async function generateAcademicContent(
   
   Write at least 500 words for this section.`;
 
-    const completion = await openai.chat.completions.create({
-        messages: [
-            {
-                role: "system",
-                content: "You are a professional academic writer. You follow academic integrity and never fabricate data or references.",
-            },
-            {
-                role: "user",
-                content: prompt,
-            },
-        ],
-        model: "gpt-4-turbo-preview",
-    });
-
-    return completion.choices[0].message.content;
+    return await generateWithFallback(prompt, "You are a professional academic writer. You follow academic integrity and never fabricate data or references.");
 }
