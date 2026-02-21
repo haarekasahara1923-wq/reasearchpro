@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  FREE
+  PRO
+  PREMIUM
+  ADMIN
+}
+
+enum ProjectType {
+  THESIS
+  PHD
+  REVIEW
+  DISSERTATION
+  SYNOPSIS
+  INTERNSHIP_REPORT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String?
+  email         String         @unique
+  password      String
+  role          Role           @default(FREE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+  projects      Project[]
+  payments      Payment[]
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  userId                 String
+  user                   User               @relation(fields: [userId], references: [id])
+  razorpaySubscriptionId String?            @unique
+  planType               Role
+  status                 SubscriptionStatus @default(ACTIVE)
+  startDate              DateTime           @default(now())
+  endDate                DateTime
+  createdAt              DateTime           @default(now())
+}
+
+model Project {
+  id                String             @id @default(uuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id])
+  title             String
+  type              ProjectType
+  field             String
+  degreeLevel       String?
+  country           String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  sections          Section[]
+  embeddings        Embedding[]
+  citations         Citation[]
+  plagiarismReports PlagiarismReport[]
+}
+
+model Section {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  content     String   @db.Text
+  version     Int      @default(1)
+  wordCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Embedding {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contentChunk String   @db.Text
+  embedding    Unsupported("vector(1536)")?
+  createdAt    DateTime @default(now())
+}
+
+model Citation {
+  id                String   @id @default(uuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title             String
+  authors           String?
+  journal           String?
+  year              Int?
+  doi               String?
+  formattedCitation String   @db.Text
+  verified          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+}
+
+model PlagiarismReport {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  similarityScore Float
+  aiScore         Float?
+  reportUrl       String?
+  createdAt       DateTime @default(now())
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id])
+  razorpayPaymentId String   @unique
+  amount            Float
+  currency          String   @default("INR")
+  status            String
+  createdAt         DateTime @default(now())
+}
