@@ -19,7 +19,7 @@ export async function generatePPT(projectTitle: string, sections: { title: strin
         let s = pres.addSlide();
         s.addText(section.title, {
             x: 0.5, y: 0.5, w: "90%", h: 1,
-            fontSize: 32, color: "363636", bold: true, underline: true
+            fontSize: 32, color: "363636", bold: true, underline: { style: "sng" }
         });
 
         // Simple content splitting (demo purposes)
