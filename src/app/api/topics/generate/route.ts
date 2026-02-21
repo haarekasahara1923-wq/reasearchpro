@@ -4,6 +4,8 @@ import { generateTopics } from "@/lib/groq";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -17,10 +19,6 @@ export async function POST(req: Request) {
         if (!field || !degreeLevel) {
             return new NextResponse("Missing required fields", { status: 400 });
         }
-
-        // Check usage limits based on role (simple check for now)
-        // const user = await prisma.user.findUnique({ where: { id: (session.user as any).id } });
-        // if (user?.role === "FREE" && ...) { ... }
 
         const topics = await generateTopics(field, degreeLevel);
 

@@ -1,9 +1,3 @@
-import OpenAI from "openai";
-
-export const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
 import { generateWithFallback } from "./ai";
 
 export async function generateAcademicContent(

@@ -1,9 +1,4 @@
-import { groq } from "./groq";
-import { openai } from "./openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const geminiModel = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
+import { groq, openai, getGenAI } from "./ai-clients";
 
 export async function generateWithFallback(
     prompt: string,
@@ -47,7 +42,8 @@ export async function generateWithFallback(
     // 3. Try GEMINI
     try {
         console.log("Attempting generation with GEMINI...");
-        const result = await geminiModel.generateContent({
+        const model = getGenAI().getGenerativeModel({ model: "gemini-1.5-pro" });
+        const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}${isJson ? "\n\nReturn ONLY a JSON object." : ""}` }] }],
         });
         const response = await result.response;
