@@ -22,7 +22,7 @@ export async function generateWithFallback(
                 { role: "system", content: systemPrompt },
                 { role: "user", content: prompt },
             ],
-            model: "llama-3.1-70b-versatile",
+            model: "llama-3.3-70b-versatile",
             ...(isJson ? { response_format: { type: "json_object" } } : {}),
         });
         const content = completion.choices[0].message.content;
@@ -66,6 +66,7 @@ export async function generateWithFallback(
         if (!process.env.GEMINI_API_KEY) throw new Error("Key missing");
         console.log("Attempting GEMINI...");
         const genAI = getGenAI();
+        // Updated model name to most compatible version
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}${isJson ? "\n\nReturn ONLY a JSON object without any markdown formatting." : ""}` }] }],
@@ -84,5 +85,9 @@ export async function generateWithFallback(
         errors.push(msg);
     }
 
-    throw new Error(`AI Generation Failed. Details: ${errors.join(" | ")}`);
+    throw new Error(`AI Generation Failed. 
+    1. GROQ Error: ${errors[0] || "None"}
+    2. OpenAI Error: ${errors[1] || "None"} (Check if quota exceeded)
+    3. Gemini Error: ${errors[2] || "None"}
+    Please check your API keys and billing status on the provider dashboards.`);
 }
