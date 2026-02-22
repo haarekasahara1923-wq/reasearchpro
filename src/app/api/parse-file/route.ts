@@ -5,15 +5,15 @@ import * as mammoth from "mammoth";
 
 export const dynamic = "force-dynamic";
 
-// Polyfill for DOMMatrix which is sometimes expected by internal PDF.js bundled with pdf-parse
-if (typeof global !== 'undefined' && !(global as any).DOMMatrix) {
-    (global as any).DOMMatrix = class DOMMatrix {
-        constructor() { }
-    };
+// Polyfills for PDF.js internals that might be triggered by pdf-parse in Node.js
+if (typeof global !== 'undefined') {
+    (global as any).DOMMatrix = (global as any).DOMMatrix || class DOMMatrix { constructor() { } };
+    (global as any).Node = (global as any).Node || class Node { };
+    (global as any).Element = (global as any).Element || class Element { };
 }
 
 export async function GET() {
-    return NextResponse.json({ status: "active", message: "Extract Text API" });
+    return NextResponse.json({ status: "active", message: "Parse File API" });
 }
 
 export async function POST(req: Request) {
@@ -43,9 +43,16 @@ export async function POST(req: Request) {
             text = result.value;
         } else if (fileName.endsWith(".pdf")) {
             console.log("[PARSE_FILE] Parsing PDF");
-            // Lazy load pdf-parse only when needed to avoid top-level crashes
-            const pdf = require("pdf-parse");
-            const data = await pdf(buffer);
+            // Lazy load pdf-parse only when needed
+            const pdfModule = require("pdf-parse");
+            // Handle different export patterns (CommonJS vs ESM interop)
+            const parsePdf = typeof pdfModule === 'function' ? pdfModule : pdfModule.default;
+
+            if (typeof parsePdf !== 'function') {
+                throw new Error("PDF parser initialization failed - function not found");
+            }
+
+            const data = await parsePdf(buffer);
             text = data.text;
         } else if (fileName.endsWith(".txt")) {
             console.log("[PARSE_FILE] Parsing TXT");
@@ -58,11 +65,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ text: (text || "").trim() });
     } catch (error: any) {
         console.error("[PARSE_FILE_ERROR]", error);
-        // Return a more detailed error to help debugging
         return new NextResponse(JSON.stringify({
             error: "Extraction failed",
-            details: error.message,
-            stack: error.stack
+            details: error.message
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
