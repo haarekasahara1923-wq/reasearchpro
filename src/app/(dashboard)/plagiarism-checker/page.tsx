@@ -170,42 +170,6 @@ export default function PlagiarismCheckerPage() {
         }
     };
 
-    const handleRephrase = async () => {
-        if (!text) return;
-        setRephrasing(true);
-        setActiveTab("remedy");
-        try {
-            const response = await axios.post("/api/ai/write", {
-                topic: "Rephrase for Plagiarism Removal",
-                currentContent: text,
-                instructions: "Rewrite the following text to remove plagiarism while keeping the academic meaning intact and professional."
-            });
-            setAiRemedy(response.data.content);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setRephrasing(false);
-        }
-    };
-
-    const handleGrammarCheck = async () => {
-        if (!text) return;
-        setCheckingGrammar(true);
-        setActiveTab("remedy");
-        try {
-            const response = await axios.post("/api/ai/write", {
-                topic: "Grammar and Punctuation Fix",
-                currentContent: text,
-                instructions: "Act as a professional academic editor. Fix all grammar, spelling, and punctuation errors in this text. Provide the corrected version."
-            });
-            setAiRemedy(response.data.content);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setCheckingGrammar(false);
-        }
-    };
-
     const applyRemedy = () => {
         if (aiRemedy) {
             setText(aiRemedy);
