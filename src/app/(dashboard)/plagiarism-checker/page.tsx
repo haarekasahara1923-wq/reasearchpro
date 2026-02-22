@@ -2,13 +2,23 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, Loader2, FileCheck, AlertTriangle, CheckCircle2, Copy, Upload, Sparkles, Wand2, Type, Eraser, Search, Info } from "lucide-react";
+import { ShieldCheck, Loader2, FileCheck, AlertTriangle, CheckCircle2, Copy, Upload, Sparkles, Wand2, Type, Eraser, Search, Info, Download, FileText } from "lucide-react";
 import { useState, useRef } from "react";
 import axios from "axios";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function PlagiarismCheckerPage() {
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [results, setResults] = useState<any>(null);
     const [error, setError] = useState("");
     const [rephrasing, setRephrasing] = useState(false);
@@ -39,20 +49,124 @@ export default function PlagiarismCheckerPage() {
         }
     };
 
-    const onFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const content = event.target?.result as string;
-            setText(content);
-        };
+        setLoading(true);
+        setError("");
 
-        if (file.type === "text/plain") {
-            reader.readAsText(file);
-        } else {
-            setError("For now, only .txt files are supported. Copy-paste for other formats.");
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await axios.post("/api/extract-text", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+
+            if (response.data?.text) {
+                setText(response.data.text);
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Failed to extract text from file. Please ensure it's a valid PDF, DOCX, or TXT file.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const downloadAsPDF = () => {
+        if (!text) return;
+        setIsExporting(true);
+        try {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            const textWidth = pageWidth - (margin * 2);
+
+            doc.setFontSize(16);
+            doc.text("Plagiarism Check Result", margin, 20);
+
+            doc.setFontSize(10);
+            const lines = doc.splitTextToSize(text, textWidth);
+            doc.text(lines, margin, 40);
+
+            doc.save("ResearchPro_Scan_Result.pdf");
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const downloadAsDOCX = async () => {
+        if (!text) return;
+        setIsExporting(true);
+        try {
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: [
+                        new Paragraph({
+                            text: "Plagiarism Check Result",
+                            heading: HeadingLevel.HEADING_1,
+                            alignment: AlignmentType.CENTER,
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: text,
+                                    size: 24,
+                                }),
+                            ],
+                            spacing: { before: 400 },
+                        }),
+                    ],
+                }],
+            });
+
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, "ResearchPro_Scan_Result.docx");
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleRephrase = async () => {
+        if (!text) return;
+        setRephrasing(true);
+        setActiveTab("remedy");
+        try {
+            const response = await axios.post("/api/ai/write", {
+                topic: "Rephrase for Plagiarism Removal",
+                currentContent: text,
+                instructions: "Rewrite the following text to remove plagiarism while keeping the academic meaning intact and professional."
+            });
+            setAiRemedy(response.data.content);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setRephrasing(false);
+        }
+    };
+
+    const handleGrammarCheck = async () => {
+        if (!text) return;
+        setCheckingGrammar(true);
+        setActiveTab("remedy");
+        try {
+            const response = await axios.post("/api/ai/write", {
+                topic: "Grammar and Punctuation Fix",
+                currentContent: text,
+                instructions: "Act as a professional academic editor. Fix all grammar, spelling, and punctuation errors in this text. Provide the corrected version."
+            });
+            setAiRemedy(response.data.content);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCheckingGrammar(false);
         }
     };
 
@@ -103,11 +217,11 @@ export default function PlagiarismCheckerPage() {
     return (
         <div className="p-6 space-y-8 max-w-7xl mx-auto">
             <div className="flex flex-col gap-y-2">
-                <div className="flex items-center gap-x-2">
+                <div className="flex items-center gap-x-2 text-emerald-600">
                     <div className="p-2 bg-emerald-100 rounded-lg">
-                        <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                        <ShieldCheck className="w-8 h-8" />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight">Advanced Plagiarism & Grammar Suite</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Advanced Plagiarism & Grammar Suite</h1>
                 </div>
                 <p className="text-muted-foreground">
                     Scan for similarity, fix grammar errors, and rephrase with AI in one place.
@@ -119,7 +233,7 @@ export default function PlagiarismCheckerPage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle>Content Input</CardTitle>
-                            <CardDescription>Paste your thesis or upload a document.</CardDescription>
+                            <CardDescription>Paste your thesis or upload a document (PDF, DOCX, TXT).</CardDescription>
                         </div>
                         <div className="flex items-center gap-x-2">
                             <input
@@ -127,7 +241,7 @@ export default function PlagiarismCheckerPage() {
                                 hidden
                                 ref={fileInputRef}
                                 onChange={onFileUpload}
-                                accept=".txt"
+                                accept=".txt,.docx,.pdf"
                             />
                             <Button
                                 variant="outline"
@@ -136,8 +250,26 @@ export default function PlagiarismCheckerPage() {
                                 className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                             >
                                 <Upload className="w-4 h-4 mr-2" />
-                                Upload .txt
+                                Upload File
                             </Button>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" disabled={!text || isExporting}>
+                                        {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                                        Export Result
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={downloadAsPDF}>
+                                        Download as PDF
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={downloadAsDOCX}>
+                                        Download as DOCX (Word)
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
                             <Button
                                 variant="ghost"
                                 size="sm"
