@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ const projectTypes = [
     { id: "THESIS", label: "Master Thesis", color: "from-sky-600 to-cyan-600" },
 ];
 
-export default function ThesisBuilderPage() {
+function ThesisBuilderInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -396,5 +397,13 @@ export default function ThesisBuilderPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function ThesisBuilderPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>}>
+            <ThesisBuilderInner />
+        </Suspense>
     );
 }
