@@ -19,6 +19,7 @@ export default function TopicGeneratorPage() {
     const [level, setLevel] = useState("Masters");
     const [loading, setLoading] = useState(false);
     const [topics, setTopics] = useState<Topic[]>([]);
+    const [error, setError] = useState("");
 
     const onGenerate = async () => {
         try {
