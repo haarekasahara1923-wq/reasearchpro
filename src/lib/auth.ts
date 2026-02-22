@@ -5,7 +5,6 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
-    adapter: PrismaAdapter(prisma),
     providers: [
         CredentialsProvider({
             name: "credentials",
@@ -19,9 +18,7 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 const user = await prisma.user.findUnique({
-                    where: {
-                        email: credentials.email,
-                    },
+                    where: { email: credentials.email },
                 });
 
                 if (!user || !user?.password) {
@@ -37,38 +34,32 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Invalid credentials");
                 }
 
-                // --- DATABASE SELF-HEALING ---
-                let safeImage = (user as any).image;
-                if (safeImage && safeImage.startsWith("data:")) {
+                // NUCLEAR CLEANUP: Nullify image if it's base64 in DB
+                if ((user as any).image?.startsWith("data:")) {
                     await prisma.user.update({
                         where: { id: user.id },
                         data: { image: null } as any
                     });
-                    safeImage = null;
                 }
 
-                // Return ONLY the ID and tiny fields
+                // Return ONLY absolute essentials
                 return {
                     id: user.id,
-                    name: user.name,
                     email: user.email,
+                    name: user.name?.substring(0, 20) || "User"
                 };
             },
         }),
     ],
     session: {
         strategy: "jwt",
-        maxAge: 24 * 60 * 60, // 24 hours
     },
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
             }
-            // Strip everything else to keep cookie < 100 bytes
-            return {
-                id: token.id
-            };
+            return token;
         },
         async session({ session, token }) {
             if (session.user) {
@@ -79,12 +70,12 @@ export const authOptions: NextAuthOptions = {
     },
     cookies: {
         sessionToken: {
-            name: `as-v5`, // Ultra short name
+            name: `s`, // The shortest possible cookie name
             options: {
                 httpOnly: true,
                 sameSite: 'lax',
                 path: '/',
-                secure: process.env.NODE_ENV === "production",
+                secure: true,
             },
         },
     },
