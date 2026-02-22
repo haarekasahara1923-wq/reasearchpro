@@ -37,7 +37,13 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Invalid credentials");
                 }
 
-                return user;
+                // Return ONLY essential fields to keep the initial object small
+                return {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role,
+                };
             },
         }),
     ],
@@ -49,14 +55,18 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = (user as any).role;
                 token.id = user.id;
-                // STOPSHIP: Completely disabled image in token to fix persistent 494 errors
-                token.image = undefined;
             }
+
+            // SECURITY: Force delete image from token if it exists from previous state
+            if (token.image) {
+                delete token.image;
+            }
+
             if (trigger === "update") {
                 if (session?.name) token.name = session.name;
-                // Ensure image never enters token via update
-                token.image = undefined;
+                // Never allow image to be updated into the JWT token
             }
+
             return token;
         },
         async session({ session, token }) {
@@ -64,7 +74,7 @@ export const authOptions: NextAuthOptions = {
                 (session.user as any).role = token.role;
                 (session.user as any).id = token.id;
                 session.user.name = token.name as string;
-                // Provide a placeholder or null for image to prevent 494
+                // Always keep session image null to prevent large headers
                 session.user.image = null;
             }
             return session;
