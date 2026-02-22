@@ -22,8 +22,8 @@ export async function generateWithFallback(
             return JSON.parse(jsonText);
         }
         return content;
-    } catch (error) {
-        console.error("GROQ failed:", error);
+    } catch (error: any) {
+        console.error("GROQ Error Details:", error.message || error);
     }
 
     // 2. Try OPENAI
@@ -43,8 +43,8 @@ export async function generateWithFallback(
             return JSON.parse(jsonText);
         }
         return content;
-    } catch (error) {
-        console.error("OPENAI failed:", error);
+    } catch (error: any) {
+        console.error("OPENAI Error Details:", error.message || error);
     }
 
     // 3. Try GEMINI
@@ -63,14 +63,14 @@ export async function generateWithFallback(
             try {
                 return JSON.parse(jsonText);
             } catch (e) {
-                console.error("Gemini JSON parse failed, returning raw content");
+                console.error("Gemini JSON parse failed");
                 throw new Error("Invalid JSON from Gemini");
             }
         }
         return content;
-    } catch (error) {
-        console.error("GEMINI failed:", error);
+    } catch (error: any) {
+        console.error("GEMINI Error Details:", error.message || error);
     }
 
-    throw new Error("All AI models failed to generate content. Please ensure your API keys are correct in Vercel.");
+    throw new Error("All AI models failed. This usually means either the API keys are invalid or Vercel's 10-second time limit was exceeded. Try a shorter field name.");
 }
