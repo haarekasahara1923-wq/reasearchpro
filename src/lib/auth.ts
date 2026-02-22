@@ -42,11 +42,11 @@ export const authOptions: NextAuthOptions = {
                     });
                 }
 
-                // Return ONLY absolute essentials
+                // Return ONLY absolute essentials (hardcoded for now to bypass 494)
                 return {
                     id: user.id,
-                    email: user.email,
-                    name: user.name?.substring(0, 20) || "User"
+                    email: "user@rp.ai",
+                    name: "Researcher"
                 };
             },
         }),
@@ -59,7 +59,10 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.id = user.id;
             }
-            return token;
+            // Strip EVERYTHING else
+            return {
+                id: token.id
+            };
         },
         async session({ session, token }) {
             if (session.user) {
@@ -70,7 +73,7 @@ export const authOptions: NextAuthOptions = {
     },
     cookies: {
         sessionToken: {
-            name: `s`, // The shortest possible cookie name
+            name: `z`, // Smallest possible
             options: {
                 httpOnly: true,
                 sameSite: 'lax',
