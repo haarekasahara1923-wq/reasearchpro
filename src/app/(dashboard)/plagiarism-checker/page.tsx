@@ -122,12 +122,15 @@ export default function PlagiarismCheckerPage() {
 
                                     <div className="space-y-3">
                                         <p className="text-xs font-bold uppercase text-muted-foreground">Top Sources</p>
-                                        {results.sources.map((s: any, i: number) => (
+                                        {results.sources?.map((s: any, i: number) => (
                                             <div key={i} className="flex items-center justify-between p-2 border rounded-lg text-xs">
                                                 <span className="truncate max-w-[150px] font-medium">{s.title}</span>
                                                 <span className="text-rose-500 font-bold">{s.match}%</span>
                                             </div>
                                         ))}
+                                        {(!results.sources || results.sources.length === 0) && (
+                                            <p className="text-[10px] text-muted-foreground italic">No specific sources detected.</p>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
