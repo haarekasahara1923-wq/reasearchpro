@@ -49,13 +49,20 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = (user as any).role;
                 token.id = user.id;
-                token.image = (user as any).image;
+                // Only store image in token if it's a short URL, not a large Base64 string
+                const image = (user as any).image;
+                if (image && !image.startsWith("data:")) {
+                    token.image = image;
+                }
             }
-            if (trigger === "update" && session?.image) {
-                token.image = session.image;
-            }
-            if (trigger === "update" && session?.name) {
-                token.name = session.name;
+            if (trigger === "update") {
+                if (session?.name) token.name = session.name;
+                // DO NOT store base64 in token to avoid 494 error
+                if (session?.image && !session.image.startsWith("data:")) {
+                    token.image = session.image;
+                } else if (session?.image === "") {
+                    token.image = "";
+                }
             }
             return token;
         },
