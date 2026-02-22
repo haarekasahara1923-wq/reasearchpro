@@ -276,32 +276,34 @@ export default function ProjectEditorPage() {
                                 {activeSection?.title}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-4 md:p-12">
+                        <CardContent className="p-0 flex flex-col flex-1">
                             <textarea
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
-                                className="w-full min-h-[600px] resize-none bg-transparent prose dark:prose-invert focus:outline-none text-lg leading-relaxed placeholder:text-muted-foreground/30"
+                                className="w-full flex-1 min-h-[700px] p-8 md:p-12 resize-none bg-transparent focus:outline-none text-lg leading-relaxed placeholder:text-muted-foreground/20 border-none transition-all"
                                 placeholder={`Start writing your ${activeSection?.title} here...`}
+                                spellCheck="false"
                             />
 
+                            {/* Action Placeholder when empty */}
                             {!content && !generating && (
-                                <div className="flex flex-col items-center justify-center py-20 border-t border-dashed mt-10 space-y-4">
-                                    <Sparkles className="w-10 h-10 text-primary/20" />
+                                <div className="p-12 border-t border-dashed bg-slate-50/50 flex flex-col items-center justify-center space-y-4">
+                                    <Sparkles className="w-10 h-10 text-slate-200" />
                                     <div className="text-center">
-                                        <p className="text-sm font-medium">Empty Section</p>
-                                        <p className="text-xs text-muted-foreground">Get started by using the AI Assistant on the right.</p>
+                                        <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Empty Section</p>
+                                        <p className="text-xs text-slate-400">Type above or use the AI Assistant to generate content.</p>
                                     </div>
-                                    <Button variant="outline" onClick={generateSection} className="gap-x-2">
-                                        <Sparkles className="w-4 h-4" />
-                                        Fast Generate Section
+                                    <Button variant="outline" onClick={generateSection} className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white transition-all">
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        Fast Generate
                                     </Button>
                                 </div>
                             )}
 
                             {generating && (
-                                <div className="flex flex-col items-center justify-center py-20 border-t border-dashed mt-10 space-y-4">
-                                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                                    <p className="text-sm animate-pulse">AI is writing your {activeSection?.title}...</p>
+                                <div className="p-12 border-t border-dashed bg-slate-50/50 flex flex-col items-center justify-center space-y-4">
+                                    <Loader2 className="w-10 h-10 animate-spin text-slate-900" />
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-900 animate-pulse">AI is Researching...</p>
                                 </div>
                             )}
                         </CardContent>

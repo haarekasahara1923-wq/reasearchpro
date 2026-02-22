@@ -40,11 +40,11 @@ export const authOptions: NextAuthOptions = {
                 // --- DATABASE SELF-HEALING ---
                 // If user has a large Base64 image in DB, it's causing the 494 error.
                 // We null it out here to fix the root cause during login.
-                let safeImage = user.image;
-                if (user.image && user.image.startsWith("data:")) {
+                let safeImage = (user as any).image;
+                if ((user as any).image && (user as any).image.startsWith("data:")) {
                     await prisma.user.update({
                         where: { id: user.id },
-                        data: { image: null }
+                        data: { image: null } as any
                     });
                     safeImage = null;
                 }
