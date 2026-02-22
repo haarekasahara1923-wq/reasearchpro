@@ -72,16 +72,16 @@ export const authOptions: NextAuthOptions = {
                 const userImage = (user as any).image;
                 if (userImage && typeof userImage === "string" && !userImage.startsWith("data:")) {
                     token.image = userImage;
-                } else {
-                    token.image = null;
                 }
             }
 
             if (trigger === "update") {
                 if (session?.name) token.name = session.name;
-                // Only update image if it's a safe URL coming from Cloudinary
+                // Only allow image if it's a safe, small URL (Cloudinary)
                 if (session?.image && typeof session.image === "string" && !session.image.startsWith("data:")) {
                     token.image = session.image;
+                } else if (session?.image === "") {
+                    token.image = null;
                 }
             }
 
@@ -95,6 +95,17 @@ export const authOptions: NextAuthOptions = {
                 session.user.image = token.image as string | null;
             }
             return session;
+        },
+    },
+    cookies: {
+        sessionToken: {
+            name: `rp-session-v4`, // FRESH START: Bypasses any old bloated cookies
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === "production",
+            },
         },
     },
     pages: {

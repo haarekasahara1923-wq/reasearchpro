@@ -48,11 +48,24 @@ export default function SettingsPage() {
     const onSave = async () => {
         try {
             setIsSaving(true);
-            await axios.patch("/api/user/profile", { name, image });
-            await update({ name, image });
-            // Show success toast here if available
+            const response = await axios.patch("/api/user/profile", { name, image });
+            const updatedUser = response.data;
+
+            // CRITICAL: Update session with the CLOUDINARY URL, not the local base64
+            await update({
+                name: updatedUser.name,
+                image: updatedUser.image
+            });
+
+            // Sync local state if needed (though Cloudinary URL should be fine)
+            if (updatedUser.image) {
+                setImage(updatedUser.image);
+            }
+
+            alert("Profile updated successfully!");
         } catch (error) {
             console.error(error);
+            alert("Failed to update profile. Please ensure image size is small.");
         } finally {
             setIsSaving(false);
         }
