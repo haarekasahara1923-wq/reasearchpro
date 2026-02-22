@@ -14,8 +14,8 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { topic, sectionTitle, currentContent, field, degreeLevel, instructions } = body;
 
-        if (!topic || !sectionTitle) {
-            return new NextResponse("Missing data", { status: 400 });
+        if (!topic) {
+            return new NextResponse("Missing topic", { status: 400 });
         }
 
         const systemPrompt = `You are a professional academic research assistant specializing in ${field || 'academic writing'}. 

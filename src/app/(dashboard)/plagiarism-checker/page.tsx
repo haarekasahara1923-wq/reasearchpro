@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, Loader2, FileCheck, AlertTriangle, CheckCircle2, Copy } from "lucide-react";
-import { useState } from "react";
+import { ShieldCheck, Loader2, FileCheck, AlertTriangle, CheckCircle2, Copy, Upload, Sparkles, Wand2, Type, Eraser, Search, Info } from "lucide-react";
+import { useState, useRef } from "react";
 import axios from "axios";
 
 export default function PlagiarismCheckerPage() {
@@ -11,6 +11,11 @@ export default function PlagiarismCheckerPage() {
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<any>(null);
     const [error, setError] = useState("");
+    const [rephrasing, setRephrasing] = useState(false);
+    const [checkingGrammar, setCheckingGrammar] = useState(false);
+    const [aiRemedy, setAiRemedy] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<"plag" | "grammar" | "remedy">("plag");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const onCheck = async () => {
         if (!text || text.length < 50) {
@@ -20,24 +25,78 @@ export default function PlagiarismCheckerPage() {
         setLoading(true);
         setError("");
         setResults(null);
+        setAiRemedy(null);
 
         try {
             const response = await axios.post("/api/plagiarism/check", { text });
             setResults(response.data);
+            setActiveTab("plag");
         } catch (err) {
             console.error(err);
-            setError("Check failed. Please ensure you have sufficient credits or try again later.");
-            // Mocking results for demo
-            setResults({
-                score: 15,
-                sources: [
-                    { title: "Journal of Academic Studies", match: 8, url: "#" },
-                    { title: "Wikipedia: Machine Learning", match: 4, url: "#" }
-                ],
-                aiProbability: 12
-            });
+            setError("Check failed. Please try again.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const onFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const content = event.target?.result as string;
+            setText(content);
+        };
+
+        if (file.type === "text/plain") {
+            reader.readAsText(file);
+        } else {
+            setError("For now, only .txt files are supported. Copy-paste for other formats.");
+        }
+    };
+
+    const handleRephrase = async () => {
+        if (!text) return;
+        setRephrasing(true);
+        setActiveTab("remedy");
+        try {
+            const response = await axios.post("/api/ai/write", {
+                topic: "Rephrase for Plagiarism Removal",
+                currentContent: text,
+                instructions: "Rewrite the following text to remove plagiarism while keeping the academic meaning intact and professional."
+            });
+            setAiRemedy(response.data.content);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setRephrasing(false);
+        }
+    };
+
+    const handleGrammarCheck = async () => {
+        if (!text) return;
+        setCheckingGrammar(true);
+        setActiveTab("remedy");
+        try {
+            const response = await axios.post("/api/ai/write", {
+                topic: "Grammar and Punctuation Fix",
+                currentContent: text,
+                instructions: "Act as a professional academic editor. Fix all grammar, spelling, and punctuation errors in this text. Provide the corrected version."
+            });
+            setAiRemedy(response.data.content);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCheckingGrammar(false);
+        }
+    };
+
+    const applyRemedy = () => {
+        if (aiRemedy) {
+            setText(aiRemedy);
+            setAiRemedy(null);
+            setActiveTab("plag");
         }
     };
 
@@ -48,28 +107,56 @@ export default function PlagiarismCheckerPage() {
                     <div className="p-2 bg-emerald-100 rounded-lg">
                         <ShieldCheck className="w-8 h-8 text-emerald-600" />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight">Plagiarism Checker</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Advanced Plagiarism & Grammar Suite</h1>
                 </div>
                 <p className="text-muted-foreground">
-                    Ensure the originality of your work with our advanced scanning technology.
+                    Scan for similarity, fix grammar errors, and rephrase with AI in one place.
                 </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-2 shadow-sm border-none bg-muted/5">
-                    <CardHeader>
-                        <CardTitle>Content Input</CardTitle>
-                        <CardDescription>Paste your thesis section or paper content below.</CardDescription>
+                <Card className="lg:col-span-2 shadow-sm border-none bg-muted/5 flex flex-col">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle>Content Input</CardTitle>
+                            <CardDescription>Paste your thesis or upload a document.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-x-2">
+                            <input
+                                type="file"
+                                hidden
+                                ref={fileInputRef}
+                                onChange={onFileUpload}
+                                accept=".txt"
+                            />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Upload .txt
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setText(""); setResults(null); setAiRemedy(null); }}
+                                className="text-muted-foreground"
+                            >
+                                <Eraser className="w-4 h-4 mr-2" />
+                                Clear
+                            </Button>
+                        </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 flex-1">
                         <textarea
-                            className="w-full min-h-[400px] p-4 bg-background border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none text-sm leading-relaxed"
-                            placeholder="Paste your text here (minimum 50 characters)..."
+                            className="w-full h-[500px] p-4 bg-background border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none text-sm leading-relaxed font-serif"
+                            placeholder="Paste your research text here (min 50 chars)..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                         />
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">{text.length} characters | ~{Math.ceil(text.length / 6)} words</span>
+                        <div className="flex flex-wrap items-center gap-3">
                             <Button
                                 className="bg-emerald-600 hover:bg-emerald-700 h-11 px-8"
                                 onClick={onCheck}
@@ -78,14 +165,34 @@ export default function PlagiarismCheckerPage() {
                                 {loading ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Scanning Content...
+                                        Scanning...
                                     </>
                                 ) : (
                                     <>
                                         <FileCheck className="w-4 h-4 mr-2" />
-                                        Check for Plagiarism
+                                        Check Plagiarism
                                     </>
                                 )}
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                className="h-11 border-blue-200 text-blue-700 hover:bg-blue-50"
+                                onClick={handleGrammarCheck}
+                                disabled={checkingGrammar || !text}
+                            >
+                                {checkingGrammar ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Type className="w-4 h-4 mr-2" />}
+                                Fix Grammar & Spellings
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                className="h-11 border-violet-200 text-violet-700 hover:bg-violet-50"
+                                onClick={handleRephrase}
+                                disabled={rephrasing || !text}
+                            >
+                                {rephrasing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                                AI Rephrase (Remove Plag)
                             </Button>
                         </div>
                         {error && <p className="text-xs text-destructive bg-destructive/5 p-2 rounded">{error}</p>}
@@ -93,65 +200,137 @@ export default function PlagiarismCheckerPage() {
                 </Card>
 
                 <div className="space-y-6">
-                    {/* Results Overview */}
-                    <Card className="shadow-sm border-none bg-emerald-50/50 overflow-hidden">
-                        <CardHeader className="bg-emerald-600 text-white pb-8">
-                            <CardTitle className="text-lg">Scan Results</CardTitle>
-                            <CardDescription className="text-emerald-100">Click check to see detailed insights.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="-mt-6 bg-background rounded-t-3xl p-6">
-                            {results ? (
-                                <div className="space-y-6">
-                                    <div className="flex flex-col items-center text-center">
-                                        <div className={`text-5xl font-bold ${results.score > 20 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                            {results.score}%
-                                        </div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-2">Similarity Score</p>
-                                    </div>
+                    {/* Tabs / Analysis Panel */}
+                    <Card className="shadow-sm border-none bg-background overflow-hidden h-full">
+                        <div className="flex border-b">
+                            {[
+                                { id: "plag", label: "Analysis", icon: Search },
+                                { id: "remedy", label: "AI Remedy", icon: Sparkles }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id as any)}
+                                    className={`flex-1 flex items-center justify-center gap-x-2 py-4 text-xs font-bold uppercase tracking-wider transition-all ${activeTab === tab.id ? 'border-b-2 border-emerald-500 text-emerald-600 bg-emerald-50/10' : 'text-muted-foreground hover:bg-muted/30'}`}
+                                >
+                                    <tab.icon className="w-4 h-4" />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-3 bg-muted/10 rounded-xl text-center">
-                                            <p className="text-lg font-bold">{100 - results.score}%</p>
-                                            <p className="text-[10px] text-muted-foreground uppercase">Unique</p>
-                                        </div>
-                                        <div className="p-3 bg-muted/10 rounded-xl text-center">
-                                            <p className="text-lg font-bold">{results.aiProbability}%</p>
-                                            <p className="text-[10px] text-muted-foreground uppercase">AI Score</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <p className="text-xs font-bold uppercase text-muted-foreground">Top Sources</p>
-                                        {results.sources?.map((s: any, i: number) => (
-                                            <div key={i} className="flex items-center justify-between p-2 border rounded-lg text-xs">
-                                                <span className="truncate max-w-[150px] font-medium">{s.title}</span>
-                                                <span className="text-rose-500 font-bold">{s.match}%</span>
+                        <CardContent className="p-6">
+                            {activeTab === "plag" && (
+                                <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
+                                    {results ? (
+                                        <div className="space-y-8">
+                                            <div className="flex flex-col items-center text-center">
+                                                <div className={`relative w-32 h-32 flex items-center justify-center rounded-full border-8 ${results.score > 20 ? 'border-rose-100 text-rose-500' : 'border-emerald-100 text-emerald-500'}`}>
+                                                    <span className="text-3xl font-black">{results.score}%</span>
+                                                    <div className={`absolute -bottom-2 px-3 py-1 rounded-full text-[10px] font-bold text-white ${results.score > 20 ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                                                        {results.score > 20 ? 'High Risk' : 'Healthy'}
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs font-bold uppercase text-muted-foreground mt-6 tracking-widest">Similarity Score</p>
                                             </div>
-                                        ))}
-                                        {(!results.sources || results.sources.length === 0) && (
-                                            <p className="text-[10px] text-muted-foreground italic">No specific sources detected.</p>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-4 bg-muted/20 rounded-2xl flex flex-col items-center">
+                                                    <p className="text-lg font-black">{100 - results.score}%</p>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Unique</p>
+                                                </div>
+                                                <div className="p-4 bg-muted/20 rounded-2xl flex flex-col items-center">
+                                                    <p className="text-lg font-black">{results.aiProbability}%</p>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">AI Content</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-xs font-bold uppercase text-muted-foreground">Detailed Sources</p>
+                                                    <Info className="w-3 h-3 text-muted-foreground" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {results.sources?.map((s: any, i: number) => (
+                                                        <div key={i} className="group flex items-center justify-between p-3 border rounded-xl text-xs hover:border-emerald-500/50 transition-all cursor-pointer">
+                                                            <div className="flex flex-col gap-y-1">
+                                                                <span className="truncate max-w-[150px] font-bold">{s.title}</span>
+                                                                <span className="text-[10px] text-muted-foreground group-hover:text-emerald-600">View source article</span>
+                                                            </div>
+                                                            <span className="text-rose-500 font-black bg-rose-50 px-2 py-1 rounded-lg">{s.match}%</span>
+                                                        </div>
+                                                    ))}
+                                                    {(!results.sources || results.sources.length === 0) && (
+                                                        <div className="text-center py-6 bg-emerald-50/50 rounded-xl border border-dashed border-emerald-200">
+                                                            <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+                                                            <p className="text-[10px] text-emerald-800 font-medium">No major similarity sources found.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="py-32 flex flex-col items-center text-center space-y-4 opacity-30">
+                                            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center">
+                                                <ShieldCheck className="w-10 h-10" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-bold">Waiting for Scan</p>
+                                                <p className="text-xs">Paste your text and click check.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === "remedy" && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                                    <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                                        <div className="flex items-center gap-x-2 mb-3">
+                                            <Sparkles className="w-4 h-4 text-primary" />
+                                            <p className="text-xs font-bold uppercase text-primary">AI Remedy Results</p>
+                                        </div>
+
+                                        {aiRemedy ? (
+                                            <div className="space-y-4">
+                                                <div className="bg-background border rounded-xl p-4 text-xs leading-relaxed max-h-[400px] overflow-y-auto font-serif">
+                                                    {aiRemedy}
+                                                </div>
+                                                <Button
+                                                    className="w-full bg-primary hover:bg-primary/90"
+                                                    size="sm"
+                                                    onClick={applyRemedy}
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                    Apply to Editor
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="py-20 flex flex-col items-center text-center space-y-4 opacity-40">
+                                                {rephrasing || checkingGrammar ? (
+                                                    <div className="flex flex-col items-center gap-y-3">
+                                                        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                                                        <p className="text-xs font-medium">AI is refining your content...</p>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <Sparkles className="w-10 h-10 text-primary" />
+                                                        <p className="text-xs">Use "Fix Grammar" or "AI Rephrase" to see suggestions here.</p>
+                                                    </>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="py-20 flex flex-col items-center text-center space-y-4 opacity-30">
-                                    <ShieldCheck className="w-16 h-16 text-emerald-600" />
-                                    <p className="text-sm">No scan history in this session</p>
+
+                                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+                                        <p className="text-[10px] font-black text-blue-800 uppercase mb-1">Editor's Note</p>
+                                        <p className="text-[11px] text-blue-700 leading-relaxed italic">
+                                            "Our AI remedy maintains the academic integrity of your work while strictly addressing similarity issues."
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
-
-                    {/* Pro Tips */}
-                    <div className="bg-sky-50 border border-sky-100 p-4 rounded-2xl flex gap-x-3">
-                        <AlertTriangle className="w-5 h-5 text-sky-600 shrink-0" />
-                        <div className="space-y-1">
-                            <p className="text-xs font-bold text-sky-900">Academic Tip</p>
-                            <p className="text-[11px] text-sky-800 leading-relaxed">
-                                Always use proper citations to lower your similarity score. Even a 5% score might be flagged if it's a direct quote without a label.
-                            </p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
