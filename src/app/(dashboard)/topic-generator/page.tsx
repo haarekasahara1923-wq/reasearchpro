@@ -16,6 +16,15 @@ interface Topic {
     gap: string;
 }
 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
+
 export default function TopicGeneratorPage() {
     const router = useRouter();
     const [field, setField] = useState("");
@@ -98,6 +107,52 @@ export default function TopicGeneratorPage() {
         doc.save(`${topic.title.substring(0, 30).trim()}.pdf`);
     };
 
+    const downloadAsDOCX = async (topic: Topic) => {
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({
+                        text: "Research Topic Proposal",
+                        heading: HeadingLevel.TITLE,
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 400 },
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Suggested Title: ", bold: true }),
+                            new TextRun(topic.title),
+                        ],
+                        spacing: { before: 200, after: 200 },
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Detailed Description: ", bold: true }),
+                        ],
+                        spacing: { before: 200 },
+                    }),
+                    new Paragraph({
+                        text: topic.description,
+                        spacing: { after: 200 },
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Research Gap: ", bold: true }),
+                        ],
+                        spacing: { before: 200 },
+                    }),
+                    new Paragraph({
+                        text: topic.gap,
+                        italics: true,
+                    }),
+                ],
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `${topic.title.substring(0, 30).trim()}.docx`);
+    };
+
     const [loadingProject, setLoadingProject] = useState<string | null>(null);
 
     const startProject = async (title: string) => {
@@ -105,7 +160,7 @@ export default function TopicGeneratorPage() {
             setLoadingProject(title);
             const response = await axios.post("/api/projects", {
                 title,
-                type: "PHD", // Default to PHD or check level
+                type: "PHD",
                 field: field,
                 degreeLevel: level
             });
@@ -212,12 +267,24 @@ export default function TopicGeneratorPage() {
                             </div>
                         </CardContent>
                         <div className="p-4 pt-0 flex flex-col gap-2">
-                            <Button variant="outline" size="sm" className="w-full hover:bg-primary hover:text-white group/btn" onClick={() => downloadAsPDF(topic)}>
-                                <Download className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
-                                Download PDF
-                            </Button>
-                            <Button size="sm" className="w-full" onClick={() => startProject(topic.title)}>
-                                <Rocket className="w-4 h-4 mr-2" />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="w-full hover:bg-primary hover:text-white group/btn">
+                                        <Download className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+                                        Export Idea
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="center" className="w-[200px]">
+                                    <DropdownMenuItem onClick={() => downloadAsPDF(topic)}>
+                                        Export as PDF
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => downloadAsDOCX(topic)}>
+                                        Export as DOCX (Word)
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Button size="sm" className="w-full" onClick={() => startProject(topic.title)} disabled={loadingProject === topic.title}>
+                                {loadingProject === topic.title ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Rocket className="w-4 h-4 mr-2" />}
                                 Start This Project
                             </Button>
                         </div>

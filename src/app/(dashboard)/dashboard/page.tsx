@@ -12,37 +12,8 @@ import {
     ArrowUpRight
 } from "lucide-react";
 import Link from "next/link";
-
-const stats = [
-    {
-        label: "Total Projects",
-        value: "12",
-        icon: FileText,
-        color: "text-sky-500",
-        bgColor: "bg-sky-500/10",
-    },
-    {
-        label: "AI Words Used",
-        value: "45,210",
-        icon: Lightbulb,
-        color: "text-violet-500",
-        bgColor: "bg-violet-500/10",
-    },
-    {
-        label: "Citations Saved",
-        value: "124",
-        icon: BookOpen,
-        color: "text-blue-500",
-        bgColor: "bg-blue-500/10",
-    },
-    {
-        label: "Current Plan",
-        value: "PhD Premium",
-        icon: CreditCard,
-        color: "text-emerald-500",
-        bgColor: "bg-emerald-500/10",
-    },
-];
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 const tools = [
     {
@@ -76,6 +47,54 @@ const tools = [
 ];
 
 export default function DashboardPage() {
+    const [projects, setProjects] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const response = await axios.get("/api/projects");
+                setProjects(response.data.slice(0, 5)); // Get last 5 projects
+            } catch (error) {
+                console.error("Failed to fetch projects:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProjects();
+    }, []);
+
+    const stats = [
+        {
+            label: "Total Projects",
+            value: projects.length.toString(),
+            icon: FileText,
+            color: "text-sky-500",
+            bgColor: "bg-sky-500/10",
+        },
+        {
+            label: "AI Words Used",
+            value: "45,210",
+            icon: Lightbulb,
+            color: "text-violet-500",
+            bgColor: "bg-violet-500/10",
+        },
+        {
+            label: "Citations Saved",
+            value: "124",
+            icon: BookOpen,
+            color: "text-blue-500",
+            bgColor: "bg-blue-500/10",
+        },
+        {
+            label: "Current Plan",
+            value: "PhD Premium",
+            icon: CreditCard,
+            color: "text-emerald-500",
+            bgColor: "bg-emerald-500/10",
+        },
+    ];
+
     return (
         <div className="p-4 space-y-8">
             <div className="flex flex-col space-y-2">
@@ -131,18 +150,32 @@ export default function DashboardPage() {
                         <CardTitle>Recent Projects</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition cursor-pointer">
-                                <div className="flex items-center gap-x-3">
-                                    <FileText className="h-5 w-5 text-zinc-500" />
-                                    <div>
-                                        <p className="font-medium text-sm">Research Paper {i}</p>
-                                        <p className="text-xs text-muted-foreground">Updated 2h ago</p>
-                                    </div>
-                                </div>
-                                <span className="text-xs bg-zinc-100 px-2 py-1 rounded">Draft</span>
+                        {loading ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
                             </div>
-                        ))}
+                        ) : projects.length > 0 ? (
+                            projects.map((project) => (
+                                <Link key={project.id} href={`/thesis-builder/${project.id}`}>
+                                    <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition cursor-pointer mb-2">
+                                        <div className="flex items-center gap-x-3">
+                                            <FileText className="h-5 w-5 text-zinc-500" />
+                                            <div>
+                                                <p className="font-medium text-sm">{project.title}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Updated {new Date(project.updatedAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs bg-zinc-100 px-2 py-1 rounded">{project.type}</span>
+                                    </div>
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="text-center py-10 text-muted-foreground text-sm border-2 border-dashed rounded-xl">
+                                No projects yet. Start by generating a topic!
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

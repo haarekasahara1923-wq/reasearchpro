@@ -7,7 +7,16 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useParams } from "next/navigation";
-import { Label } from "@/components/ui/label"; // Assuming Label is a new import
+import { Label } from "@/components/ui/label";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
 
 interface Section {
     id: string;
@@ -95,6 +104,100 @@ export default function ProjectEditorPage() {
         }
     };
 
+    const exportToPDF = () => {
+        if (!project) return;
+        const doc = new jsPDF();
+        let yOffset = 20;
+
+        // Cover Page
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(26);
+        const titleLines = doc.splitTextToSize(project.title, 160);
+        doc.text(titleLines, 105, 100, { align: "center" });
+
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Research Field: ${project.field}`, 105, 140, { align: "center" });
+        doc.text(`Level: ${project.degreeLevel}`, 105, 150, { align: "center" });
+
+        doc.addPage();
+        yOffset = 20;
+
+        project.sections.forEach((section) => {
+            // New page for each major section if it doesn't fit
+            if (yOffset > 240) {
+                doc.addPage();
+                yOffset = 20;
+            }
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.text(section.title, 20, yOffset);
+            yOffset += 12;
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(12);
+            const lines = doc.splitTextToSize(section.content || "Pending research content...", 170);
+
+            // Handle multiple pages for long content
+            lines.forEach((line: string) => {
+                if (yOffset > 280) {
+                    doc.addPage();
+                    yOffset = 20;
+                }
+                doc.text(line, 20, yOffset);
+                yOffset += 7;
+            });
+
+            yOffset += 10;
+        });
+
+        doc.save(`${project.title.replace(/\s+/g, '_')}.pdf`);
+    };
+
+    const exportToDOCX = async () => {
+        if (!project) return;
+
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({
+                        text: project.title,
+                        heading: HeadingLevel.TITLE,
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 400 },
+                    }),
+                    new Paragraph({
+                        text: `Field: ${project.field}`,
+                        alignment: AlignmentType.CENTER,
+                    }),
+                    new Paragraph({
+                        text: `Level: ${project.degreeLevel}`,
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 800 },
+                    }),
+                    ...project.sections.flatMap((section) => [
+                        new Paragraph({
+                            text: section.title,
+                            heading: HeadingLevel.HEADING_1,
+                            spacing: { before: 400, after: 200 },
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(section.content || "Pending research content..."),
+                            ],
+                            spacing: { after: 200 },
+                        }),
+                    ]),
+                ],
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `${project.title.replace(/\s+/g, '_')}.docx`);
+    };
+
     if (loading) {
         return <div className="flex bg-background h-screen items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -118,10 +221,23 @@ export default function ProjectEditorPage() {
                         {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                         Save Changes
                     </Button>
-                    <Button size="sm">
-                        <Send className="w-4 h-4 mr-2" />
-                        Export Thesis
-                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button size="sm">
+                                <Send className="w-4 h-4 mr-2" />
+                                Export Thesis
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={exportToPDF}>
+                                Export as PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={exportToDOCX}>
+                                Export as DOCX (Word)
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
