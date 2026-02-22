@@ -3,13 +3,17 @@ import { generateWithFallback } from "@/lib/ai";
 
 export async function POST(req: Request) {
     try {
-        const { topic, pages = 10 } = await req.json();
+        const { topic, pages = 10, type = "thesis" } = await req.json();
 
         if (!topic) {
             return new NextResponse("Topic is required", { status: 400 });
         }
 
-        const prompt = `Act as an academic presentation expert. Create a detailed slide-by-slide outline for a presentation on the topic: "${topic}".
+        const typeContext = type === "thesis"
+            ? "academic dissertation/thesis"
+            : "professional research paper/journal";
+
+        const prompt = `Act as an academic presentation expert. Create a detailed slide-by-slide outline for a ${typeContext} presentation on the topic: "${topic}".
         Generate exactly ${pages} slides.
         Include:
         1. Title Slide (Title, Subtitle)
@@ -23,7 +27,7 @@ export async function POST(req: Request) {
         9. References Placeholder
         
         Return ONLY a JSON array of objects where each object is: {"title": "Slide Title", "content": ["Bullet point 1", "Bullet point 2", "Bullet point 3"]}.
-        Make the content high-quality, academic, and professional.`;
+        Make the content high-quality, academic, and professional according to ${typeContext} standards.`;
 
         const slides = await generateWithFallback(
             prompt,
