@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as mammoth from "mammoth";
-// @ts-ignore
-import pdf from "pdf-parse/lib/pdf-parse.js";
+
+// Dynamic require to bypass ESM export checks during build
+const pdf = require("pdf-parse");
 
 export const dynamic = "force-dynamic";
 
