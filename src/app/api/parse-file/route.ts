@@ -47,14 +47,24 @@ export async function POST(req: Request) {
             // Defensive loading for pdf-parse
             const pdfLib = require("pdf-parse");
 
-            // pdf-parse can export as a function directly or inside a 'default' property
-            let parseFunc = pdfLib;
-            if (typeof pdfLib !== 'function' && pdfLib.default) {
+            // Look for the actual parsing function (handles various bundler wraps)
+            let parseFunc: any = null;
+            if (typeof pdfLib === 'function') {
+                parseFunc = pdfLib;
+            } else if (pdfLib && typeof pdfLib.default === 'function') {
                 parseFunc = pdfLib.default;
+            } else if (pdfLib && typeof pdfLib === 'object') {
+                // Last ditch effort: scan for any function property
+                for (const key of Object.keys(pdfLib)) {
+                    if (typeof pdfLib[key] === 'function') {
+                        parseFunc = pdfLib[key];
+                        break;
+                    }
+                }
             }
 
             if (typeof parseFunc !== 'function') {
-                throw new Error(`PDF library loaded but is not a function. Type: ${typeof parseFunc}`);
+                throw new Error(`PDF library failure. Available keys: ${Object.keys(pdfLib || {}).join(', ')}`);
             }
 
             const data = await parseFunc(buffer);
