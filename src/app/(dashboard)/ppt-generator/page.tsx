@@ -12,9 +12,10 @@ import {
     CheckCircle2,
     FileText,
     ChevronRight,
-    Search
+    Search,
+    Book
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import pptxgen from "pptxgenjs";
 import jsPDF from "jspdf";
@@ -27,17 +28,32 @@ export default function PptGeneratorPage() {
     const [generating, setGenerating] = useState(false);
     const [slides, setSlides] = useState<any[]>([]);
     const [downloading, setDownloading] = useState<"pptx" | "pdf" | null>(null);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const res = await axios.get("/api/projects");
+                setProjects(res.data);
+            } catch (err) {
+                console.error("Failed to fetch projects", err);
+            }
+        };
+        fetchProjects();
+    }, []);
 
     const onGenerate = async () => {
-        if (!topic) return;
+        if (!topic && !selectedProjectId) return;
         try {
             setGenerating(true);
             setSlides([]);
 
             const res = await axios.post("/api/ppt/generate", {
-                topic,
+                topic: selectedProjectId ? "" : topic,
                 pages: 10,
-                type
+                type,
+                projectId: selectedProjectId
             });
             setSlides(res.data);
         } catch (error) {
@@ -173,15 +189,40 @@ export default function PptGeneratorPage() {
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-x-2">
-                                <Search className="w-3 h-3 text-red-500" /> Presentation Topic / Focus
+                                <Book className="w-3 h-3 text-red-500" /> Select Source Project
                             </label>
-                            <textarea
-                                className="w-full h-40 p-4 bg-background border rounded-2xl focus:ring-2 focus:ring-red-500 focus:outline-none transition-all resize-none shadow-inner text-sm leading-relaxed"
-                                placeholder={type === "thesis" ? "e.g. Defense presentation for my dissertation on Quantum Cryptography..." : "e.g. Conference presentation summarizing my findings on renewable energy..."}
-                                value={topic}
-                                onChange={(e) => setTopic(e.target.value)}
-                            />
+                            <select
+                                className="w-full h-12 px-4 bg-background border rounded-xl focus:ring-2 focus:ring-red-500 focus:outline-none transition-all shadow-sm text-sm"
+                                value={selectedProjectId}
+                                onChange={(e) => setSelectedProjectId(e.target.value)}
+                            >
+                                <option value="">-- Use Custom Topic --</option>
+                                {projects.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.title}</option>
+                                ))}
+                            </select>
                         </div>
+
+                        {!selectedProjectId && (
+                            <div className="space-y-2 animate-in slide-in-from-top-2">
+                                <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-x-2">
+                                    <Search className="w-3 h-3 text-red-500" /> Presentation Topic / Focus
+                                </label>
+                                <textarea
+                                    className="w-full h-40 p-4 bg-background border rounded-2xl focus:ring-2 focus:ring-red-500 focus:outline-none transition-all resize-none shadow-inner text-sm leading-relaxed"
+                                    placeholder={type === "thesis" ? "e.g. Defense presentation for my dissertation on Quantum Cryptography..." : "e.g. Conference presentation summarizing my findings on renewable energy..."}
+                                    value={topic}
+                                    onChange={(e) => setTopic(e.target.value)}
+                                />
+                            </div>
+                        )}
+
+                        {selectedProjectId && (
+                            <div className="p-4 bg-red-50/50 rounded-2xl border border-red-100 flex items-center gap-x-3 text-red-700 animate-in slide-in-from-top-2">
+                                <CheckCircle2 className="w-5 h-5" />
+                                <p className="text-xs font-bold font-serif italic">Presentation will be generated using your research data from "{projects.find(p => p.id === selectedProjectId)?.title}"</p>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 border bg-background rounded-2xl flex items-center gap-x-3 border-red-500/20 shadow-sm transition-all hover:border-red-500/40">
@@ -203,7 +244,7 @@ export default function PptGeneratorPage() {
                         <Button
                             className="w-full h-14 bg-red-600 hover:bg-red-700 font-black rounded-xl shadow-lg shadow-red-500/20 text-md uppercase tracking-widest mt-4"
                             onClick={onGenerate}
-                            disabled={generating || !topic}
+                            disabled={generating || (!topic && !selectedProjectId)}
                         >
                             {generating ? (
                                 <>

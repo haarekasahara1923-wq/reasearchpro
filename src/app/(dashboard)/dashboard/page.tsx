@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 
 const tools = [
@@ -47,6 +48,7 @@ const tools = [
 ];
 
 export default function DashboardPage() {
+    const { data: session } = useSession();
     const [projects, setProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
