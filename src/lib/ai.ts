@@ -5,8 +5,15 @@ export async function generateWithFallback(
     systemPrompt: string = "You are a professional academic research assistant.",
     isJson: boolean = false
 ) {
+    console.log("Environment Check:", {
+        hasGroq: !!process.env.GROQ_API_KEY,
+        hasOpenAI: !!process.env.OPENAI_API_KEY,
+        hasGemini: !!process.env.GEMINI_API_KEY,
+    });
+
     // 1. Try GROQ
     try {
+        if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
         console.log("Attempting generation with GROQ...");
         const completion = await groq.chat.completions.create({
             messages: [
@@ -23,11 +30,12 @@ export async function generateWithFallback(
         }
         return content;
     } catch (error: any) {
-        console.error("GROQ Error Details:", error.message || error);
+        console.error("GROQ Error:", error.message || error);
     }
 
     // 2. Try OPENAI
     try {
+        if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
         console.log("Attempting generation with OPENAI...");
         const completion = await openai.chat.completions.create({
             messages: [
@@ -44,11 +52,12 @@ export async function generateWithFallback(
         }
         return content;
     } catch (error: any) {
-        console.error("OPENAI Error Details:", error.message || error);
+        console.error("OPENAI Error:", error.message || error);
     }
 
     // 3. Try GEMINI
     try {
+        if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
         console.log("Attempting generation with GEMINI...");
         const genAI = getGenAI();
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Using Flash for speed to avoid timeouts
@@ -69,8 +78,8 @@ export async function generateWithFallback(
         }
         return content;
     } catch (error: any) {
-        console.error("GEMINI Error Details:", error.message || error);
+        console.error("GEMINI Error:", error.message || error);
     }
 
-    throw new Error("All AI models failed. This usually means either the API keys are invalid or Vercel's 10-second time limit was exceeded. Try a shorter field name.");
+    throw new Error("All AI models failed. This indicates either invalid API keys or a persistent timeout. Please check Vercel logs for 'Error Details'.");
 }
