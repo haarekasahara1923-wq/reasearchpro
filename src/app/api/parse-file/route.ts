@@ -5,19 +5,25 @@ import * as mammoth from "mammoth";
 
 export const dynamic = "force-dynamic";
 
-// Polyfills for PDF.js internals that might be triggered by pdf-parse in Node.js
+// Extended Polyfills to satisfy PDF.js (used by pdf-parse) in Node environment
 if (typeof global !== 'undefined') {
-    (global as any).DOMMatrix = (global as any).DOMMatrix || class DOMMatrix { constructor() { } };
+    (global as any).DOMMatrix = (global as any).DOMMatrix || class DOMMatrix {
+        constructor() { }
+        static fromMatrix() { return new DOMMatrix(); }
+        static fromFloat32Array() { return new DOMMatrix(); }
+        static fromFloat64Array() { return new DOMMatrix(); }
+    };
     (global as any).Node = (global as any).Node || class Node { };
     (global as any).Element = (global as any).Element || class Element { };
+    (global as any).CharacterData = (global as any).CharacterData || class CharacterData { };
+    (global as any).Document = (global as any).Document || class Document { };
 }
 
 export async function GET() {
-    return NextResponse.json({ status: "active", message: "Parse File API" });
+    return NextResponse.json({ status: "active", message: "Enhanced Parse File API" });
 }
 
 export async function POST(req: Request) {
-    console.log("[PARSE_FILE] Request started");
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -26,48 +32,46 @@ export async function POST(req: Request) {
 
         const formData = await req.formData();
         const file = formData.get("file") as File;
-
         if (!file) {
             return new NextResponse("No file uploaded", { status: 400 });
         }
 
         const fileName = file.name.toLowerCase();
-        console.log(`[PARSE_FILE] Processing: ${fileName} (${file.size} bytes)`);
-
         const buffer = Buffer.from(await file.arrayBuffer());
         let text = "";
 
         if (fileName.endsWith(".docx")) {
-            console.log("[PARSE_FILE] Parsing DOCX");
             const result = await mammoth.extractRawText({ buffer });
-            text = result.value;
+            text = (result.value || "").trim();
         } else if (fileName.endsWith(".pdf")) {
-            console.log("[PARSE_FILE] Parsing PDF");
-            // Lazy load pdf-parse only when needed
-            const pdfModule = require("pdf-parse");
-            // Handle different export patterns (CommonJS vs ESM interop)
-            const parsePdf = typeof pdfModule === 'function' ? pdfModule : pdfModule.default;
+            // Defensive loading for pdf-parse
+            const pdfLib = require("pdf-parse");
 
-            if (typeof parsePdf !== 'function') {
-                throw new Error("PDF parser initialization failed - function not found");
+            // pdf-parse can export as a function directly or inside a 'default' property
+            let parseFunc = pdfLib;
+            if (typeof pdfLib !== 'function' && pdfLib.default) {
+                parseFunc = pdfLib.default;
             }
 
-            const data = await parsePdf(buffer);
-            text = data.text;
+            if (typeof parseFunc !== 'function') {
+                throw new Error(`PDF library loaded but is not a function. Type: ${typeof parseFunc}`);
+            }
+
+            const data = await parseFunc(buffer);
+            text = (data.text || "").trim();
         } else if (fileName.endsWith(".txt")) {
-            console.log("[PARSE_FILE] Parsing TXT");
-            text = buffer.toString("utf-8");
+            text = buffer.toString("utf-8").trim();
         } else {
             return new NextResponse("Unsupported format", { status: 400 });
         }
 
-        console.log(`[PARSE_FILE] Success. Extracted ${text?.length || 0} chars`);
-        return NextResponse.json({ text: (text || "").trim() });
+        return NextResponse.json({ text });
     } catch (error: any) {
         console.error("[PARSE_FILE_ERROR]", error);
         return new NextResponse(JSON.stringify({
             error: "Extraction failed",
-            details: error.message
+            message: error.message,
+            type: error.name
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
