@@ -60,7 +60,7 @@ export default function PlagiarismCheckerPage() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await axios.post("/api/extract-text", formData, {
+            const response = await axios.post("/api/parse-file", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
 
