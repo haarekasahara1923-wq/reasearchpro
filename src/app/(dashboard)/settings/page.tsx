@@ -16,6 +16,7 @@ export default function SettingsPage() {
     const [name, setName] = useState("");
     const [image, setImage] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         if (session?.user) {
@@ -23,6 +24,26 @@ export default function SettingsPage() {
             setImage(session.user.image || "");
         }
     }, [session]);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check file size (limit to 1MB for base64 storage)
+        if (file.size > 1024 * 1024) {
+            alert("Image size should be less than 1MB");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadstart = () => setUploading(true);
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setImage(base64String);
+            setUploading(false);
+        };
+        reader.readAsDataURL(file);
+    };
 
     const onSave = async () => {
         try {
@@ -78,34 +99,51 @@ export default function SettingsPage() {
                         <CardContent className="p-8 space-y-8">
                             <div className="flex flex-col sm:flex-row items-center gap-8">
                                 <div className="relative group">
-                                    <Avatar className="h-32 w-32 border-4 border-white shadow-2xl">
-                                        <AvatarImage src={image} />
+                                    <Avatar className="h-32 w-32 border-4 border-white shadow-2xl overflow-hidden">
+                                        <AvatarImage src={image} className="object-cover" />
                                         <AvatarFallback className="bg-slate-900 text-white text-4xl font-black">
                                             {name?.[0] || "U"}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                        <Camera className="w-8 h-8 text-white" />
-                                    </div>
+                                    <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
+                                        {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                                            <>
+                                                <Camera className="w-6 h-6 mb-1" />
+                                                <span className="text-[10px] font-black uppercase">Change</span>
+                                            </>
+                                        )}
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleFileUpload}
+                                        />
+                                    </label>
                                 </div>
                                 <div className="flex-1 space-y-4 w-full">
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Display Name</Label>
-                                        <Input
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            placeholder="Your Name"
-                                            className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-slate-900"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Profile Image (URL)</Label>
-                                        <Input
-                                            value={image}
-                                            onChange={(e) => setImage(e.target.value)}
-                                            placeholder="https://..."
-                                            className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-slate-900"
-                                        />
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Display Name</Label>
+                                            <Input
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                placeholder="Your Name"
+                                                className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-slate-900"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-x-4">
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-1">
+                                                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Upload Method</p>
+                                                <p className="text-xs font-bold text-slate-600">Direct Gallery Upload Enabled</p>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                className="rounded-xl h-12 border-2 border-slate-200"
+                                                onClick={() => document.querySelector('input[type="file"]')?.dispatchEvent(new MouseEvent('click'))}
+                                            >
+                                                Select File
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
