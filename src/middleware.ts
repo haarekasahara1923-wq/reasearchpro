@@ -3,11 +3,14 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
+    // Let NextAuth auto-detect secureCookie based on request protocol
     const token = await getToken({
         req,
         secret: process.env.NEXTAUTH_SECRET,
-        secureCookie: true
     });
+
+    // Build response — we always continue or redirect
+    let response: NextResponse;
 
     // Protect all dashboard routes
     if (!token && (
@@ -16,10 +19,24 @@ export async function middleware(req: NextRequest) {
         req.nextUrl.pathname.startsWith("/topic-generator") ||
         req.nextUrl.pathname.startsWith("/settings")
     )) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        response = NextResponse.redirect(new URL("/login", req.url));
+    } else {
+        response = NextResponse.next();
     }
 
-    return NextResponse.next();
+    // Clear the old stale 'z' cookie that was set by a previous auth config.
+    // This was causing the 494 REQUEST_HEADER_TOO_LARGE error.
+    if (req.cookies.has("z")) {
+        response.cookies.set("z", "", {
+            maxAge: 0,
+            path: "/",
+            httpOnly: true,
+            sameSite: "lax",
+            secure: true,
+        });
+    }
+
+    return response;
 }
 
 export const config = {

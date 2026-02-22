@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -34,34 +33,34 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Invalid credentials");
                 }
 
-                // NUCLEAR CLEANUP: Nullify image if it's base64 in DB
-                if ((user as any).image?.startsWith("data:")) {
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: { image: null } as any
-                    });
-                }
-
-                // Return ONLY absolute essentials (hardcoded for now to bypass 494)
+                // Return only the minimal data needed — no base64 images
                 return {
                     id: user.id,
-                    email: "user@rp.ai",
-                    name: "Researcher"
+                    email: user.email,
+                    name: user.name ?? "Researcher",
                 };
             },
         }),
     ],
     session: {
         strategy: "jwt",
+        // Keep JWT short-lived to reduce token size in cookie
+        maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
             }
-            // Strip EVERYTHING else
+            // Keep the token minimal: only id, email, name, sub, iat, exp, jti
             return {
-                id: token.id
+                id: token.id,
+                sub: token.sub,
+                email: token.email,
+                name: token.name,
+                iat: token.iat,
+                exp: token.exp,
+                jti: token.jti,
             };
         },
         async session({ session, token }) {
@@ -71,17 +70,8 @@ export const authOptions: NextAuthOptions = {
             return session;
         },
     },
-    cookies: {
-        sessionToken: {
-            name: `z`, // Smallest possible
-            options: {
-                httpOnly: true,
-                sameSite: 'lax',
-                path: '/',
-                secure: true,
-            },
-        },
-    },
+    // Use NextAuth default cookie names so middleware can find the token
+    // Do NOT override cookie names — custom names break getToken() in middleware
     pages: {
         signIn: "/login",
     },
