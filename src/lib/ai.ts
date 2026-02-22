@@ -13,11 +13,15 @@ export async function generateWithFallback(
                 { role: "system", content: systemPrompt },
                 { role: "user", content: prompt },
             ],
-            model: "llama3-70b-8192",
+            model: "llama-3.1-70b-versatile", // Using a more modern Groq model
             ...(isJson ? { response_format: { type: "json_object" } } : {}),
         });
         const content = completion.choices[0].message.content;
-        return isJson ? JSON.parse(content || "{}") : content;
+        if (isJson) {
+            const jsonText = content?.match(/\{[\s\S]*\}/)?.[0] || content || "{}";
+            return JSON.parse(jsonText);
+        }
+        return content;
     } catch (error) {
         console.error("GROQ failed:", error);
     }
@@ -30,11 +34,15 @@ export async function generateWithFallback(
                 { role: "system", content: systemPrompt },
                 { role: "user", content: prompt },
             ],
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o-mini", // Faster and more efficient for JSON
             ...(isJson ? { response_format: { type: "json_object" } } : {}),
         });
         const content = completion.choices[0].message.content;
-        return isJson ? JSON.parse(content || "{}") : content;
+        if (isJson) {
+            const jsonText = content?.match(/\{[\s\S]*\}/)?.[0] || content || "{}";
+            return JSON.parse(jsonText);
+        }
+        return content;
     } catch (error) {
         console.error("OPENAI failed:", error);
     }
@@ -42,21 +50,27 @@ export async function generateWithFallback(
     // 3. Try GEMINI
     try {
         console.log("Attempting generation with GEMINI...");
-        const model = getGenAI().getGenerativeModel({ model: "gemini-1.5-pro" });
+        const genAI = getGenAI();
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Using Flash for speed to avoid timeouts
         const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}${isJson ? "\n\nReturn ONLY a JSON object." : ""}` }] }],
+            contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}${isJson ? "\n\nReturn ONLY a JSON object without any markdown formatting." : ""}` }] }],
         });
         const response = await result.response;
         const content = response.text();
+
         if (isJson) {
-            // Basic JSON extraction for Gemini
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            return JSON.parse(jsonMatch ? jsonMatch[0] : content);
+            const jsonText = content.match(/\{[\s\S]*\}/)?.[0] || content;
+            try {
+                return JSON.parse(jsonText);
+            } catch (e) {
+                console.error("Gemini JSON parse failed, returning raw content");
+                throw new Error("Invalid JSON from Gemini");
+            }
         }
         return content;
     } catch (error) {
         console.error("GEMINI failed:", error);
     }
 
-    throw new Error("All AI models failed to generate content.");
+    throw new Error("All AI models failed to generate content. Please ensure your API keys are correct in Vercel.");
 }
