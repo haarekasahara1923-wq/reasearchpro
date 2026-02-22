@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { FileText, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const projectTypes = [
     { id: "THESIS", label: "Thesis" },
@@ -18,9 +19,19 @@ const projectTypes = [
 ];
 
 export default function ThesisBuilderPage() {
+    const router = useRouter();
     const [showNewDialog, setShowNewDialog] = useState(false);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
+    const [newProjectTitle, setNewProjectTitle] = useState("");
+
+    const handleCreateProject = () => {
+        if (!newProjectTitle) return;
+        setLoading(true);
+        // Simulate creation and redirect
+        const id = newProjectTitle.toLowerCase().replace(/ /g, "-").substring(0, 20);
+        router.push(`/thesis-builder/${id}`);
+    };
 
     return (
         <div className="p-4 space-y-6">
@@ -66,7 +77,7 @@ export default function ThesisBuilderPage() {
                     </CardContent>
                     <CardFooter>
                         <Button variant="ghost" className="w-full" asChild>
-                            <Link href="/thesis-builder/project-id">Continue Writing</Link>
+                            <Link href="/thesis-builder/healthcare-ai">Continue Writing</Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -82,7 +93,11 @@ export default function ThesisBuilderPage() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Title</Label>
-                                <Input placeholder="e.g. A Comparative Study of..." />
+                                <Input
+                                    placeholder="e.g. A Comparative Study of..."
+                                    value={newProjectTitle}
+                                    onChange={(e) => setNewProjectTitle(e.target.value)}
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -99,7 +114,9 @@ export default function ThesisBuilderPage() {
                         </CardContent>
                         <CardFooter className="flex justify-end gap-x-2">
                             <Button variant="outline" onClick={() => setShowNewDialog(false)}>Cancel</Button>
-                            <Button>Create Project</Button>
+                            <Button onClick={handleCreateProject} disabled={!newProjectTitle}>
+                                {loading ? "Creating..." : "Create Project"}
+                            </Button>
                         </CardFooter>
                     </Card>
                 </div>
