@@ -37,12 +37,13 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Invalid credentials");
                 }
 
-                // Return ONLY essential fields to keep the initial object small
+                // Return essential fields + image for safety check in JWT
                 return {
                     id: user.id,
                     email: user.email,
                     name: user.name,
                     role: user.role,
+                    image: user.image,
                 };
             },
         }),
@@ -55,16 +56,22 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = (user as any).role;
                 token.id = user.id;
-            }
 
-            // SECURITY: Force delete image from token if it exists from previous state
-            if (token.image) {
-                delete token.image;
+                // SAFELY include image ONLY if it's a short URL
+                const userImage = (user as any).image;
+                if (userImage && typeof userImage === "string" && !userImage.startsWith("data:")) {
+                    token.image = userImage;
+                } else {
+                    token.image = null;
+                }
             }
 
             if (trigger === "update") {
                 if (session?.name) token.name = session.name;
-                // Never allow image to be updated into the JWT token
+                // Only update image if it's a safe URL coming from Cloudinary
+                if (session?.image && typeof session.image === "string" && !session.image.startsWith("data:")) {
+                    token.image = session.image;
+                }
             }
 
             return token;
@@ -74,8 +81,7 @@ export const authOptions: NextAuthOptions = {
                 (session.user as any).role = token.role;
                 (session.user as any).id = token.id;
                 session.user.name = token.name as string;
-                // Always keep session image null to prevent large headers
-                session.user.image = null;
+                session.user.image = token.image as string | null;
             }
             return session;
         },
