@@ -197,7 +197,7 @@ export default function PlagiarismCheckerPage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle>Content Input</CardTitle>
-                            <CardDescription>Paste your thesis or upload a document (PDF, DOCX, TXT).</CardDescription>
+                            <CardDescription>Paste your thesis or upload a document (DOCX, TXT).</CardDescription>
                         </div>
                         <div className="flex items-center gap-x-2">
                             <input
@@ -205,7 +205,7 @@ export default function PlagiarismCheckerPage() {
                                 hidden
                                 ref={fileInputRef}
                                 onChange={onFileUpload}
-                                accept=".txt,.docx,.pdf"
+                                accept=".txt,.docx"
                             />
                             <Button
                                 variant="outline"
@@ -225,9 +225,6 @@ export default function PlagiarismCheckerPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={downloadAsPDF}>
-                                        Download as PDF
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={downloadAsDOCX}>
                                         Download as DOCX (Word)
                                     </DropdownMenuItem>
