@@ -38,10 +38,8 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 // --- DATABASE SELF-HEALING ---
-                // If user has a large Base64 image in DB, it's causing the 494 error.
-                // We null it out here to fix the root cause during login.
                 let safeImage = (user as any).image;
-                if ((user as any).image && (user as any).image.startsWith("data:")) {
+                if (safeImage && safeImage.startsWith("data:")) {
                     await prisma.user.update({
                         where: { id: user.id },
                         data: { image: null } as any
@@ -49,57 +47,39 @@ export const authOptions: NextAuthOptions = {
                     safeImage = null;
                 }
 
+                // Return ONLY the ID and tiny fields
                 return {
                     id: user.id,
-                    email: user.email,
                     name: user.name,
-                    role: user.role,
-                    image: safeImage,
+                    email: user.email,
                 };
             },
         }),
     ],
     session: {
         strategy: "jwt",
+        maxAge: 24 * 60 * 60, // 24 hours
     },
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
+        async jwt({ token, user }) {
             if (user) {
-                token.role = (user as any).role;
                 token.id = user.id;
-
-                // SAFELY include image ONLY if it's a short URL
-                const userImage = (user as any).image;
-                if (userImage && typeof userImage === "string" && !userImage.startsWith("data:")) {
-                    token.image = userImage;
-                }
             }
-
-            if (trigger === "update") {
-                if (session?.name) token.name = session.name;
-                // Only allow image if it's a safe, small URL (Cloudinary)
-                if (session?.image && typeof session.image === "string" && !session.image.startsWith("data:")) {
-                    token.image = session.image;
-                } else if (session?.image === "") {
-                    token.image = null;
-                }
-            }
-
-            return token;
+            // Strip everything else to keep cookie < 100 bytes
+            return {
+                id: token.id
+            };
         },
         async session({ session, token }) {
             if (session.user) {
-                (session.user as any).role = token.role;
                 (session.user as any).id = token.id;
-                session.user.name = token.name as string;
-                session.user.image = token.image as string | null;
             }
             return session;
         },
     },
     cookies: {
         sessionToken: {
-            name: `rp-session-v4`, // FRESH START: Bypasses any old bloated cookies
+            name: `as-v5`, // Ultra short name
             options: {
                 httpOnly: true,
                 sameSite: 'lax',
