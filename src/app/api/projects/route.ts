@@ -18,24 +18,74 @@ export async function POST(req: Request) {
             return new NextResponse("Missing fields", { status: 400 });
         }
 
+        // Define default sections based on type
+        let sections: { title: string, content: string }[] = [];
+
+        switch (type) {
+            case "SYNOPSIS":
+                sections = [
+                    { title: "Introduction", content: "" },
+                    { title: "Problem Statement", content: "" },
+                    { title: "Objectives", content: "" },
+                    { title: "Methodology Plan", content: "" },
+                    { title: "Expected Outcomes", content: "" },
+                    { title: "Bibliography", content: "" },
+                ];
+                break;
+            case "INTERNSHIP_REPORT":
+                sections = [
+                    { title: "Introduction", content: "" },
+                    { title: "Company Profile", content: "" },
+                    { title: "Task Performed", content: "" },
+                    { title: "Learning Outcomes", content: "" },
+                    { title: "Conclusion", content: "" },
+                    { title: "Certificate/Appendices", content: "" },
+                ];
+                break;
+            case "RESEARCH_PAPER":
+            case "REVIEW":
+                sections = [
+                    { title: "Abstract", content: "" },
+                    { title: "Introduction", content: "" },
+                    { title: "Key Keywords", content: "" },
+                    { title: "Materials and Methods", content: "" },
+                    { title: "Results & Discussion", content: "" },
+                    { title: "Conclusion", content: "" },
+                    { title: "References", content: "" },
+                ];
+                break;
+            case "DISSERTATION":
+                sections = [
+                    { title: "Front Matter", content: "" },
+                    { title: "Abstract", content: "" },
+                    { title: "Chapters / Body", content: "" },
+                    { title: "Appendices", content: "" },
+                    { title: "Bibliography", content: "" },
+                ];
+                break;
+            default: // PHD and THESIS
+                sections = [
+                    { title: "Abstract", content: "" },
+                    { title: "Introduction", content: "" },
+                    { title: "Literature Review", content: "" },
+                    { title: "Methodology", content: "" },
+                    { title: "Data Analysis", content: "" },
+                    { title: "Results", content: "" },
+                    { title: "Discussion", content: "" },
+                    { title: "Conclusion", content: "" },
+                    { title: "References", content: "" },
+                ];
+        }
+
         const project = await prisma.project.create({
             data: {
                 userId,
                 title,
                 type,
                 field,
-                degreeLevel: degreeLevel || "Masters",
+                degreeLevel: degreeLevel || "PhD",
                 sections: {
-                    create: [
-                        { title: "Abstract", content: "" },
-                        { title: "Introduction", content: "" },
-                        { title: "Literature Review", content: "" },
-                        { title: "Methodology", content: "" },
-                        { title: "Results", content: "" },
-                        { title: "Discussion", content: "" },
-                        { title: "Conclusion", content: "" },
-                        { title: "References", content: "" },
-                    ]
+                    create: sections
                 }
             },
         });

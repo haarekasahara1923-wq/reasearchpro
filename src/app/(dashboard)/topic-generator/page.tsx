@@ -154,13 +154,14 @@ export default function TopicGeneratorPage() {
     };
 
     const [loadingProject, setLoadingProject] = useState<string | null>(null);
+    const [projectType, setProjectType] = useState("PHD");
 
     const startProject = async (title: string) => {
         try {
             setLoadingProject(title);
             const response = await axios.post("/api/projects", {
                 title,
-                type: "PHD",
+                type: projectType,
                 field: field,
                 degreeLevel: level
             });
@@ -220,6 +221,23 @@ export default function TopicGeneratorPage() {
                                 <option value="PhD">PhD</option>
                                 <option value="Research Scholar">Research Scholar</option>
                                 <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="type">Target Project Type</Label>
+                            <select
+                                id="type"
+                                className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={projectType}
+                                onChange={(e) => setProjectType(e.target.value)}
+                            >
+                                <option value="PHD">PhD Thesis</option>
+                                <option value="THESIS">Master Thesis</option>
+                                <option value="RESEARCH_PAPER">Research Paper</option>
+                                <option value="REVIEW">Review Paper</option>
+                                <option value="SYNOPSIS">Synopsis</option>
+                                <option value="DISSERTATION">Dissertation</option>
+                                <option value="INTERNSHIP_REPORT">Internship Report</option>
                             </select>
                         </div>
                     </div>

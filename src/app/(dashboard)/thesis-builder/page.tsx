@@ -133,15 +133,46 @@ export default function ThesisBuilderPage() {
                 </Card>
             </div>
 
+            {/* Quick Actions / Categories */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Quick Start Studio</h2>
+                    <div className="h-px flex-1 bg-slate-100 ml-6" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {projectTypes.map((type) => (
+                        <button
+                            key={type.id}
+                            onClick={() => {
+                                setNewType(type.id);
+                                setShowNewDialog(true);
+                            }}
+                            className="group relative flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-900 transition-all duration-300"
+                        >
+                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${type.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                                <Plus className="w-6 h-6" />
+                            </div>
+                            <span className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-600 group-hover:text-slate-900">{type.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Search Section */}
-            <div className="relative group max-w-2xl">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
-                <Input
-                    className="h-14 pl-12 pr-6 rounded-2xl border-none bg-white shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-slate-900 text-md font-medium placeholder:text-slate-400"
-                    placeholder="Quick search projects..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="relative group w-full max-w-2xl">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                    <Input
+                        className="h-14 pl-12 pr-6 rounded-2xl border-none bg-white shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-slate-900 text-md font-medium placeholder:text-slate-400"
+                        placeholder="Quick search projects..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-x-2 text-[10px] font-black uppercase text-slate-400">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Cloud Sync Active
+                </div>
             </div>
 
             {/* Project Grid */}
@@ -235,13 +266,20 @@ export default function ThesisBuilderPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Classification</Label>
-                                    <select
-                                        className="w-full h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 px-6 font-bold text-sm outline-none appearance-none"
-                                        value={newType}
-                                        onChange={(e) => setNewType(e.target.value)}
-                                    >
-                                        {projectTypes.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-                                    </select>
+                                    <div className="relative group">
+                                        <select
+                                            className="w-full h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 px-6 font-bold text-sm outline-none appearance-none cursor-pointer"
+                                            value={newType}
+                                            onChange={(e) => setNewType(e.target.value)}
+                                        >
+                                            {projectTypes.map(type => (
+                                                <option key={type.id} value={type.id}>{type.label}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-slate-900 transition-colors">
+                                            <ChevronRight className="w-4 h-4 rotate-90" />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="space-y-3">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain / Field</Label>
