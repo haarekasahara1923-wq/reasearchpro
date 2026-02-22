@@ -36,18 +36,6 @@ const projectTypes = [
 
 const routes = [
     {
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        href: "/dashboard",
-        color: "text-sky-500",
-    },
-    {
-        label: "Topic Generator",
-        icon: Lightbulb,
-        href: "/topic-generator",
-        color: "text-violet-500",
-    },
-    {
         label: "Literature Explorer",
         icon: Search,
         href: "/literature-explorer",
