@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 
 const projectTypes = [
@@ -33,16 +33,32 @@ const projectTypes = [
 
 export default function ThesisBuilderPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [showNewDialog, setShowNewDialog] = useState(false);
     const [loading, setLoading] = useState(false);
     const [projects, setProjects] = useState<any[]>([]);
     const [search, setSearch] = useState("");
     const [fetching, setFetching] = useState(true);
+    const [errorMsg, setErrorMsg] = useState("");
 
     // New Project State
     const [newTitle, setNewTitle] = useState("");
     const [newType, setNewType] = useState("PHD");
     const [newField, setNewField] = useState("");
+    const [newDegreeLevel, setNewDegreeLevel] = useState("PhD");
+
+    // Handle ?type=XX&new=1 from sidebar quick-start
+    useEffect(() => {
+        const typeParam = searchParams.get("type");
+        const isNew = searchParams.get("new");
+        if (isNew === "1") {
+            if (typeParam) setNewType(typeParam);
+            setShowNewDialog(true);
+            // Clean URL
+            router.replace("/thesis-builder");
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         fetchProjects();
@@ -60,17 +76,23 @@ export default function ThesisBuilderPage() {
     };
 
     const handleCreateProject = async () => {
-        if (!newTitle || !newField) return;
+        if (!newTitle.trim() || !newField.trim()) {
+            setErrorMsg("Please fill in both Title and Domain/Field.");
+            return;
+        }
+        setErrorMsg("");
         setLoading(true);
         try {
             const response = await axios.post("/api/projects", {
-                title: newTitle,
+                title: newTitle.trim(),
                 type: newType,
-                field: newField
+                field: newField.trim(),
+                degreeLevel: newDegreeLevel,
             });
             router.push(`/thesis-builder/${response.data.id}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            setErrorMsg(error?.response?.data || "Failed to create project. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -91,10 +113,10 @@ export default function ThesisBuilderPage() {
                         </div>
                         <h1 className="text-4xl font-black tracking-tight uppercase italic text-slate-900">Research Studio</h1>
                     </div>
-                    <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-[0.2em] ml-1">Advanced Writing & Project Management</p>
+                    <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-[0.2em] ml-1">Advanced Writing &amp; Project Management</p>
                 </div>
                 <Button
-                    onClick={() => setShowNewDialog(true)}
+                    onClick={() => { setNewType("PHD"); setShowNewDialog(true); }}
                     className="h-12 px-8 bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-slate-200"
                 >
                     <Plus className="w-5 h-5 mr-3" />
@@ -128,7 +150,11 @@ export default function ThesisBuilderPage() {
                     </div>
                     <div>
                         <p className="text-xs font-black uppercase text-slate-400">Recent Update</p>
-                        <p className="text-xl font-black">2 Hours Ago</p>
+                        <p className="text-xl font-black">
+                            {projects.length > 0
+                                ? new Date(projects[0].updatedAt).toLocaleDateString()
+                                : "—"}
+                        </p>
                     </div>
                 </Card>
             </div>
@@ -163,7 +189,7 @@ export default function ThesisBuilderPage() {
                 <div className="relative group w-full max-w-2xl">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                     <Input
-                        className="h-14 pl-12 pr-6 rounded-2xl border-none bg-white shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-slate-900 text-md font-medium placeholder:text-slate-400"
+                        className="h-14 pl-12 pr-6 rounded-2xl border-none bg-white shadow-xl shadow-slate-200/50 focus:ring-2 focus:ring-slate-900 text-md font-medium placeholder:text-slate-400 text-slate-900"
                         placeholder="Quick search projects..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -215,7 +241,7 @@ export default function ThesisBuilderPage() {
                                     <div className="w-full bg-slate-100 rounded-full h-2">
                                         <div className="bg-slate-900 h-2 rounded-full w-[10%] group-hover:bg-pink-600 transition-all duration-700"></div>
                                     </div>
-                                    <p className="text-[10px] italic text-slate-400 font-medium">Last modification on {new Date(project.updatedAt).toLocaleDateString()}</p>
+                                    <p className="text-[10px] italic text-slate-400 font-medium">Last modified: {new Date(project.updatedAt).toLocaleDateString()}</p>
                                 </div>
                             </CardContent>
 
@@ -233,42 +259,55 @@ export default function ThesisBuilderPage() {
                         <div className="col-span-full py-32 text-center border-4 border-dashed border-slate-100 rounded-[3rem] flex flex-col items-center justify-center space-y-4">
                             <Plus className="w-12 h-12 text-slate-200" />
                             <h3 className="text-xl font-black text-slate-300 uppercase italic">Empty Research Repository</h3>
-                            <p className="text-slate-400 text-sm font-medium">Create your first technical project to start writing.</p>
+                            <p className="text-slate-400 text-sm font-medium">Create your first project using Quick Start Studio above.</p>
+                            <Button
+                                onClick={() => setShowNewDialog(true)}
+                                className="mt-2 bg-slate-900 text-white hover:bg-black rounded-xl px-6 font-black uppercase tracking-widest text-xs"
+                            >
+                                <Plus className="w-4 h-4 mr-2" /> Start New Project
+                            </Button>
                         </div>
                     )}
                 </div>
             )}
 
-            {/* Create Dialog */}
+            {/* ── Create Project Dialog ── */}
             {showNewDialog && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
-                    <Card className="w-full max-w-2xl border-none rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+                    <Card className="w-full max-w-2xl border-none rounded-[3rem] shadow-2xl bg-white animate-in zoom-in-95 duration-200">
                         <CardHeader className="p-10 pb-6 flex flex-row justify-between items-center">
                             <div>
-                                <CardTitle className="text-3xl font-black uppercase tracking-tight italic">Initialize Project</CardTitle>
+                                <CardTitle className="text-3xl font-black uppercase tracking-tight italic text-slate-900">Initialize Project</CardTitle>
                                 <CardDescription className="text-xs font-bold uppercase tracking-widest text-slate-400">Configure your academic development workspace</CardDescription>
                             </div>
-                            <button onClick={() => setShowNewDialog(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                            <button
+                                onClick={() => { setShowNewDialog(false); setErrorMsg(""); }}
+                                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                            >
                                 <X className="w-6 h-6 text-slate-400" />
                             </button>
                         </CardHeader>
-                        <CardContent className="p-10 pt-0 space-y-8">
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Primary Title</Label>
-                                <Input
+
+                        <CardContent className="p-10 pt-0 space-y-6">
+                            {/* Primary Title */}
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Primary Title *</Label>
+                                <input
+                                    type="text"
                                     placeholder="e.g. Investigation Into Neural Architecture Search for Medical Imaging"
-                                    className="h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 px-6 font-bold"
+                                    className="w-full h-14 rounded-2xl bg-slate-100 border-2 border-slate-200 focus:border-slate-900 focus:outline-none px-5 font-semibold text-sm text-slate-900 placeholder:text-slate-400 transition-colors"
                                     value={newTitle}
                                     onChange={(e) => setNewTitle(e.target.value)}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Classification</Label>
-                                    <div className="relative group">
+                            {/* Classification + Domain */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Classification *</Label>
+                                    <div className="relative">
                                         <select
-                                            className="w-full h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 px-6 font-bold text-sm outline-none appearance-none cursor-pointer"
+                                            className="w-full h-14 rounded-2xl bg-slate-100 border-2 border-slate-200 focus:border-slate-900 focus:outline-none px-5 font-semibold text-sm text-slate-900 appearance-none cursor-pointer transition-colors"
                                             value={newType}
                                             onChange={(e) => setNewType(e.target.value)}
                                         >
@@ -276,38 +315,81 @@ export default function ThesisBuilderPage() {
                                                 <option key={type.id} value={type.id}>{type.label}</option>
                                             ))}
                                         </select>
-                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-slate-900 transition-colors">
-                                            <ChevronRight className="w-4 h-4 rotate-90" />
-                                        </div>
+                                        <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 rotate-90 text-slate-400 pointer-events-none" />
                                     </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Domain / Field</Label>
-                                    <Input
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Domain / Field *</Label>
+                                    <input
+                                        type="text"
                                         placeholder="e.g. Computational Physics"
-                                        className="h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-slate-900 px-6 font-bold"
+                                        className="w-full h-14 rounded-2xl bg-slate-100 border-2 border-slate-200 focus:border-slate-900 focus:outline-none px-5 font-semibold text-sm text-slate-900 placeholder:text-slate-400 transition-colors"
                                         value={newField}
                                         onChange={(e) => setNewField(e.target.value)}
                                     />
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-2">
+                            {/* Degree Level */}
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Degree Level</Label>
+                                <div className="flex flex-wrap gap-3">
+                                    {["UG", "PG", "PhD", "Post-Doc"].map((level) => (
+                                        <button
+                                            key={level}
+                                            type="button"
+                                            onClick={() => setNewDegreeLevel(level)}
+                                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border-2 transition-all ${newDegreeLevel === level
+                                                ? "bg-slate-900 border-slate-900 text-white shadow-md"
+                                                : "bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-400"
+                                                }`}
+                                        >
+                                            {level}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* AI Feature info */}
+                            <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-5 rounded-2xl border border-pink-100 space-y-1">
                                 <div className="flex items-center gap-x-2">
                                     <GraduationCap className="w-4 h-4 text-pink-600" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Pro Feature Enabled</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">AI Structure Generation Enabled</span>
                                 </div>
-                                <p className="text-xs text-slate-500 font-medium">ResearchPro will automatically generate a standard structure (Abstract, Intro, Lit Review, etc.) for your {newType.toLowerCase().replace("_", " ")}.</p>
+                                <p className="text-xs text-slate-500 font-medium">
+                                    ResearchPro will auto-generate standard sections (Abstract, Introduction, Literature Review, etc.) for your <strong>{projectTypes.find(t => t.id === newType)?.label}</strong>.
+                                </p>
                             </div>
+
+                            {/* Error message */}
+                            {errorMsg && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold px-4 py-3 rounded-xl">
+                                    ⚠️ {errorMsg}
+                                </div>
+                            )}
                         </CardContent>
+
                         <CardFooter className="p-10 pt-0 flex flex-col sm:flex-row gap-4">
-                            <Button variant="ghost" className="h-14 flex-1 rounded-2xl font-black uppercase tracking-widest text-sm" onClick={() => setShowNewDialog(false)}>Cancel</Button>
+                            <Button
+                                variant="ghost"
+                                className="h-14 flex-1 rounded-2xl font-black uppercase tracking-widest text-sm text-slate-600 hover:bg-slate-100"
+                                onClick={() => { setShowNewDialog(false); setErrorMsg(""); }}
+                            >
+                                Cancel
+                            </Button>
                             <Button
                                 onClick={handleCreateProject}
-                                disabled={loading || !newTitle || !newField}
-                                className="h-14 flex-[2] bg-slate-900 hover:bg-black text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200"
+                                disabled={loading || !newTitle.trim() || !newField.trim()}
+                                className="h-14 flex-[2] bg-slate-900 hover:bg-black text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Bootstrap Project"}
+                                {loading ? (
+                                    <span className="flex items-center gap-x-2">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Creating Project...
+                                    </span>
+                                ) : (
+                                    "Bootstrap Project"
+                                )}
                             </Button>
                         </CardFooter>
                     </Card>
