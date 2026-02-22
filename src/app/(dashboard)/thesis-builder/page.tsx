@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileText, Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 const projectTypes = [
     { id: "THESIS", label: "Thesis" },
@@ -22,16 +23,45 @@ export default function ThesisBuilderPage() {
     const router = useRouter();
     const [showNewDialog, setShowNewDialog] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [projects, setProjects] = useState<any[]>([]);
     const [search, setSearch] = useState("");
     const [newProjectTitle, setNewProjectTitle] = useState("");
+    const [fetching, setFetching] = useState(true);
 
-    const handleCreateProject = () => {
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const response = await axios.get("/api/projects");
+                setProjects(response.data);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setFetching(false);
+            }
+        };
+        fetchProjects();
+    }, []);
+
+    const handleCreateProject = async () => {
         if (!newProjectTitle) return;
         setLoading(true);
-        // Simulate creation and redirect
-        const id = newProjectTitle.toLowerCase().replace(/ /g, "-").substring(0, 20);
-        router.push(`/thesis-builder/${id}`);
+        try {
+            const response = await axios.post("/api/projects", {
+                title: newProjectTitle,
+                type: "PHD",
+                field: "Academic Research"
+            });
+            router.push(`/thesis-builder/${response.data.id}`);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const filteredProjects = projects.filter(p =>
+        p.title.toLowerCase().includes(search.toLowerCase())
+    );
 
     return (
         <div className="p-4 space-y-6">
@@ -56,32 +86,50 @@ export default function ThesisBuilderPage() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Mocking projects for now */}
-                <Card className="hover:border-primary transition cursor-pointer group">
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition">
-                                <FileText className="w-6 h-6 text-primary" />
-                            </div>
-                            <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2 py-1 rounded">PhD Thesis</span>
+            {fetching ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map(i => (
+                        <Card key={i} className="animate-pulse h-48 bg-muted/20" />
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredProjects.map((project) => (
+                        <Card key={project.id} className="hover:border-primary transition cursor-pointer group">
+                            <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition">
+                                        <FileText className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2 py-1 rounded">
+                                        {project.type}
+                                    </span>
+                                </div>
+                                <CardTitle className="mt-4 line-clamp-1">{project.title}</CardTitle>
+                                <CardDescription>
+                                    Last updated: {new Date(project.updatedAt).toLocaleDateString()}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="w-full bg-muted rounded-full h-2 mt-2">
+                                    <div className="bg-primary h-2 rounded-full w-[10%]"></div>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2">Draft Mode Enabled</p>
+                            </CardContent>
+                            <CardFooter>
+                                <Button variant="ghost" className="w-full" asChild>
+                                    <Link href={`/thesis-builder/${project.id}`}>Continue Writing</Link>
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                    {filteredProjects.length === 0 && (
+                        <div className="col-span-full py-20 text-center border-2 border-dashed rounded-xl opacity-50">
+                            <p>No projects found. Create one to get started!</p>
                         </div>
-                        <CardTitle className="mt-4">Impact of AI on Healthcare</CardTitle>
-                        <CardDescription>Last updated: 2 days ago</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="w-full bg-muted rounded-full h-2 mt-2">
-                            <div className="bg-primary h-2 rounded-full w-[45%]"></div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">45% Complete (3 of 8 sections)</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button variant="ghost" className="w-full" asChild>
-                            <Link href="/thesis-builder/healthcare-ai">Continue Writing</Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </div>
+                    )}
+                </div>
+            )}
 
             {showNewDialog && (
                 <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">

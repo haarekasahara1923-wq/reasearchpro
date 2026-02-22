@@ -98,10 +98,27 @@ export default function TopicGeneratorPage() {
         doc.save(`${topic.title.substring(0, 30).trim()}.pdf`);
     };
 
-    const startProject = (title: string) => {
-        // Redirect to thesis builder
-        router.push("/thesis-builder");
-        // We could also pass state, but for now simple redirect
+    const [loadingProject, setLoadingProject] = useState<string | null>(null);
+
+    const startProject = async (title: string) => {
+        try {
+            setLoadingProject(title);
+            const response = await axios.post("/api/projects", {
+                title,
+                type: "PHD", // Default to PHD or check level
+                field: field,
+                degreeLevel: level
+            });
+
+            if (response.data?.id) {
+                router.push(`/thesis-builder/${response.data.id}`);
+            }
+        } catch (error) {
+            console.error(error);
+            setError("Failed to start project. Please try again or check if you are logged in.");
+        } finally {
+            setLoadingProject(null);
+        }
     };
 
     return (
