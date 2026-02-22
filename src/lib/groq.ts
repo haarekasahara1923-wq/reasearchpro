@@ -1,7 +1,7 @@
 import { generateWithFallback } from "./ai";
 
 export async function generateTopics(field: string, level: string) {
-  const prompt = `Expert Academic Advisor: Generate 5 unique, trending research topics for a ${level} level student in ${field}. 
+  const prompt = `Expert Academic Advisor: Generate 6 unique, trending research topics for a ${level} level student in ${field}. 
   Order: Most trending to least.
   Return ONLY a JSON object: {"topics": [{"title": "...", "description": "...", "gap": "..."}]}`;
 
