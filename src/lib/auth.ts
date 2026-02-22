@@ -49,19 +49,13 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = (user as any).role;
                 token.id = user.id;
-                // Only store safe, small URLs in the session token
-                const image = (user as any).image;
-                if (image && !image.startsWith("data:")) {
-                    token.image = image;
-                }
+                // STOPSHIP: Completely disabled image in token to fix persistent 494 errors
+                token.image = undefined;
             }
             if (trigger === "update") {
                 if (session?.name) token.name = session.name;
-                if (session?.image && !session.image.startsWith("data:")) {
-                    token.image = session.image;
-                } else if (session?.image === "") {
-                    token.image = "";
-                }
+                // Ensure image never enters token via update
+                token.image = undefined;
             }
             return token;
         },
@@ -69,8 +63,9 @@ export const authOptions: NextAuthOptions = {
             if (session.user) {
                 (session.user as any).role = token.role;
                 (session.user as any).id = token.id;
-                session.user.image = token.image as string;
                 session.user.name = token.name as string;
+                // Provide a placeholder or null for image to prevent 494
+                session.user.image = null;
             }
             return session;
         },
