@@ -37,13 +37,24 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Invalid credentials");
                 }
 
-                // Return essential fields + image for safety check in JWT
+                // --- DATABASE SELF-HEALING ---
+                // If user has a large Base64 image in DB, it's causing the 494 error.
+                // We null it out here to fix the root cause during login.
+                let safeImage = user.image;
+                if (user.image && user.image.startsWith("data:")) {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { image: null }
+                    });
+                    safeImage = null;
+                }
+
                 return {
                     id: user.id,
                     email: user.email,
                     name: user.name,
                     role: user.role,
-                    image: user.image,
+                    image: safeImage,
                 };
             },
         }),
