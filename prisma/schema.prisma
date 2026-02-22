@@ -17,6 +17,7 @@ enum Role {
 enum ProjectType {
   THESIS
   PHD
+  RESEARCH_PAPER
   REVIEW
   DISSERTATION
   SYNOPSIS
