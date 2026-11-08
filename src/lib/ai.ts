@@ -15,7 +15,7 @@ export async function generateWithFallback(
 
     // 1. Try GROQ
     try {
-        if (!process.env.GROQ_API_KEY) throw new Error("Key missing");
+        if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not set");
         console.log("Attempting GROQ...");
         const completion = await groq.chat.completions.create({
             messages: [
@@ -39,7 +39,7 @@ export async function generateWithFallback(
 
     // 2. Try OPENAI
     try {
-        if (!process.env.OPENAI_API_KEY) throw new Error("Key missing");
+        if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not set");
         console.log("Attempting OPENAI...");
         const completion = await openai.chat.completions.create({
             messages: [
@@ -63,11 +63,10 @@ export async function generateWithFallback(
 
     // 3. Try GEMINI
     try {
-        if (!process.env.GEMINI_API_KEY) throw new Error("Key missing");
+        if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
         console.log("Attempting GEMINI...");
         const genAI = getGenAI();
-        // Updated model name to most compatible version
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}${isJson ? "\n\nReturn ONLY a JSON object without any markdown formatting." : ""}` }] }],
         });
@@ -85,9 +84,9 @@ export async function generateWithFallback(
         errors.push(msg);
     }
 
-    throw new Error(`AI Generation Failed. 
-    1. GROQ Error: ${errors[0] || "None"}
-    2. OpenAI Error: ${errors[1] || "None"} (Check if quota exceeded)
-    3. Gemini Error: ${errors[2] || "None"}
-    Please check your API keys and billing status on the provider dashboards.`);
+    throw new Error(`AI Generation Failed. All providers failed:
+    1. ${errors[0] || "GROQ: key not set"}
+    2. ${errors[1] || "OpenAI: key not set"}
+    3. ${errors[2] || "Gemini: key not set"}
+    Please add API keys to your .env file. Free options: groq.com (GROQ_API_KEY) or aistudio.google.com (GEMINI_API_KEY)`);
 }

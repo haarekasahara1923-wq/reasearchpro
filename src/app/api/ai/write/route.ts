@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         const { topic, sectionTitle, currentContent, field, degreeLevel, instructions } = body;
 
         if (!topic) {
-            return new NextResponse("Missing topic", { status: 400 });
+            return NextResponse.json({ error: "Missing topic" }, { status: 400 });
         }
 
         const systemPrompt = `You are a professional academic research assistant specializing in ${field || 'academic writing'}. 
@@ -35,8 +35,11 @@ export async function POST(req: Request) {
         const result = await generateWithFallback(prompt, systemPrompt, false);
 
         return NextResponse.json({ content: result });
-    } catch (error) {
+    } catch (error: any) {
         console.error("[AI_WRITE_POST]", error);
-        return new NextResponse("Internal Error", { status: 500 });
+        return NextResponse.json(
+            { error: error.message || "AI generation failed. Please check API keys in .env file." },
+            { status: 500 }
+        );
     }
 }
