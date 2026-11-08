@@ -66,7 +66,7 @@ export async function generateWithFallback(
         if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
         console.log("Attempting GEMINI...");
         const genAI = getGenAI();
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${prompt}${isJson ? "\n\nReturn ONLY a JSON object without any markdown formatting." : ""}` }] }],
         });
